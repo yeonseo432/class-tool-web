@@ -62,7 +62,7 @@ async function ensureSample(ctx: Ctx) {
 
 export async function settings({ sb }: Ctx) {
   const row = must(await sb.from('teacher_settings').select('openai_model, image_model').maybeSingle());
-  return { hasKey: hasOpenAI(), model: row?.openai_model || 'gpt-4o-mini', imageModel: row?.image_model || 'gpt-image-1.5' };
+  return { hasKey: hasOpenAI(), model: row?.openai_model || 'gpt-6-luna', imageModel: row?.image_model || 'gpt-image-2.5-sunburst' };
 }
 
 export async function conceptsLite({ sb }: Ctx) {

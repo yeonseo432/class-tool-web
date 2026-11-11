@@ -77,6 +77,20 @@ function modal({title, body, buttons, wide, onOpen}){
   bg.addEventListener('mousedown', e => { if (e.target === bg) bg.dataset.down = 1; });
   bg.addEventListener('click', e => { if (e.target === bg && bg.dataset.down) close(); });
   $('#modalRoot').appendChild(bg);
+  // Enter = 주요 버튼(확인 · 닫기 · 저장 …). 맨 위 창일 때만, 여러 줄 입력 · 자기 Enter 동작이 있는 칸 · 버튼에 포커스가 있을 땐 그대로
+  const onKey = e => {
+    if (!bg.isConnected) return document.removeEventListener('keydown', onKey);
+    if (e.key !== 'Enter' || e.isComposing || e.shiftKey || e.ctrlKey || e.altKey || e.metaKey || e.defaultPrevented) return;
+    if ($('#modalRoot').lastElementChild !== bg || bg.dataset.busy) return;
+    const t = e.target;
+    if (t && bg.contains(t) && (t.tagName === 'TEXTAREA' || t.tagName === 'BUTTON' || t.isContentEditable || (t.matches && t.matches('input,select') && t.onkeydown))) return;
+    const btns = $$('.modal-f button', bg), main = btns.filter(x => x.classList.contains('primary')).pop() || (btns.length === 1 ? btns[0] : null);
+    if (!main || main.disabled) return;
+    e.preventDefault(); main.click();
+  };
+  setTimeout(() => { if (bg.isConnected) document.addEventListener('keydown', onKey); }, 0);   // 창을 연 그 Enter 로 바로 수락되지 않게
+  // 뒤쪽 화면(편집 창 등)에 있던 포커스는 풀어서, Enter 가 뒤쪽 칸이나 버튼으로 가지 않게
+  if (document.activeElement && document.activeElement !== document.body && !bg.contains(document.activeElement)) document.activeElement.blur();
   if (onOpen) onOpen(bg);
   const first = $('input,textarea,select', $('.modal-b', bg));
   if (first) setTimeout(() => first.focus(), 30);
@@ -112,7 +126,7 @@ const IC = {
   stats:'<svg viewBox="0 0 24 24"><circle cx="6" cy="17" r="2.2"/><circle cx="12" cy="7" r="2.2"/><circle cx="18" cy="15" r="2.2"/><path d="M7.4 15.3l3.3-6.4M13.8 8.4l3 5"/></svg>',
   exam:'<svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M9 3v2h6V3M8.5 11l2 2 4-4M8.5 17h7"/></svg>',
   student:'<svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M10 18h4"/></svg>',
-  settings:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>',
+  settings:'<svg viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>',
   folder:'<svg viewBox="0 0 24 24"><path d="M2 6.5A1.5 1.5 0 013.5 5H9l2 2.2h9.5A1.5 1.5 0 0122 8.7v9.8a1.5 1.5 0 01-1.5 1.5h-17A1.5 1.5 0 012 18.5z" fill="#ffc94d" stroke="#e0a520" stroke-width="1"/></svg>',
   trash:'<svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M5 7l1 13h12l1-13M9 7V4h6v3"/></svg>',
   play:'<svg viewBox="0 0 24 24" width="16" height="16"><path d="M7 4l13 8-13 8z" fill="currentColor"/></svg>',
@@ -130,7 +144,7 @@ const SUBJ_ICON = {
 const MANATEE = `<img src="/brand/manatee-face.png" alt="manatee" draggable="false">`;
 function subjStyle(s){
   s = s || '';
-  const T = [['수학','#0a8ff0','math'],['물리','#3d5afe','phys'],['화학','#00a37a','chem'],['생명','#2e9d4a','bio'],['생물','#2e9d4a','bio'],
+  const T = [['수학','#0a8ff0','math'],['물리','#3d5afe','phys'],['전자기','#3d5afe','phys'],['양자','#3d5afe','phys'],['화학','#00a37a','chem'],['생명','#2e9d4a','bio'],['생물','#2e9d4a','bio'],
     ['지구','#0b7fa8','earth'],['과학','#5a4fcf','phys'],['에너지','#3d5afe','phys'],['영어','#e8710a','book'],['국어','#d93a5e','book']];
   const hit = T.find(t => s.indexOf(t[0]) >= 0);
   return hit ? {color:hit[1], icon:SUBJ_ICON[hit[2]]} : {color:'#0a8ff0', icon:SUBJ_ICON.book};
@@ -1283,7 +1297,7 @@ function renderMaker(){
     <div class="mk-opts">과목 <select class="inp" id="mkSubject">${subjectOptions(S.mkSubject, '과목을 고르세요')}</select></div>
     <div class="chat-log" id="chatLog"></div>
     <label class="ai-img ${S.aiImg ? 'on' : ''}" id="aiImgBox"><input type="checkbox" id="aiImg" ${S.aiImg ? 'checked' : ''}>
-      <span class="ai-img-ic">🖼</span><span class="ai-img-t"><b>AI로 이미지 만들기</b><small>새로 만든 문제에 어울리는 그림을 함께 넣어요</small></span><span class="ai-img-sw"></span></label>
+      <span class="ai-img-ic" aria-hidden="true"><svg viewBox="0 0 108 100"><path d="M14 86L40 14L66 86M25 66H55"/><path d="M90 16V84" stroke-width="20"/></svg></span><span class="ai-img-t"><b>AI로 이미지 만들기</b><small>새로 만든 문제에 어울리는 그림을 함께 넣어요</small></span><span class="ai-img-sw"></span></label>
     <div class="chat-input"><textarea id="chatIn"></textarea><button id="chatSend">보내기</button></div>`;
   $('#aiBtn').onclick = () => { S.aiOn = !S.aiOn; paintAi(); };
   $('#aiImg').onchange = e => { S.aiImg = e.target.checked; $('#aiImgBox').classList.toggle('on', S.aiImg); };
@@ -1642,9 +1656,13 @@ function editQ(q){
 function renderTree(){
   const kw = ($('#treeSearch').value || '').trim().toLowerCase();
   const used = new Set(lessonState.ids);
-  const qItem = q => `<div class="tree-q ${used.has(q.id) ? 'used' : ''}" draggable="true" data-qid="${q.id}">
-      <span class="qtype ${q.type}">${q.type === 'mc' ? '객' : '단'}</span><span class="tt" title="${esc(q.stem)}">${esc(q.title)}</span>
+  const qItem = q => {
+    const cn = qConceptNames(q);
+    return `<div class="tree-q ${used.has(q.id) ? 'used' : ''}" draggable="true" data-qid="${q.id}">
+      <span class="qtype ${q.type}">${q.type === 'mc' ? '객' : '단'}</span><span class="tq-main"><span class="tt" title="${esc(q.stem)}">${esc(q.title)}</span>
+      <span class="tq-con">${cn.length ? cn.map(n => `<i>${esc(n)}</i>`).join('') : '<em>연결된 개념 없음</em>'}</span></span>
       <button class="add" data-add="${q.id}" title="추가">+</button></div>`;
+  };
   let html;
   if (kw) {
     const qs = S.questions.filter(q => (q.title + ' ' + q.stem).toLowerCase().includes(kw));
@@ -1652,8 +1670,8 @@ function renderTree(){
   } else {
     const walk = (pid) => S.folders.filter(f => (f.parentId || '') === pid).sort((a, b) => a.name.localeCompare(b.name, 'ko')).map(f => {
       const open = lessonState.open.has(f.id);
-      const n = countIn(f.id);
-      return `<div class="tree-f ${open ? 'open' : ''}" data-tf="${f.id}"><span class="arr">▶</span>${IC.folder.replace('<svg', '<svg width="18" height="18"')}${esc(f.name)} <small style="color:#999">${n.q}</small></div>
+      const n = countDeep(f.id);   // 하위 폴더에 든 문제까지
+      return `<div class="tree-f ${open ? 'open' : ''}" data-tf="${f.id}"><span class="arr">▶</span>${IC.folder.replace('<svg', '<svg width="18" height="18"')}${esc(f.name)} <small style="color:#999">${n}문제</small></div>
         ${open ? `<div class="tree-kids">${walk(f.id)}${S.questions.filter(q => q.folderId === f.id).map(qItem).join('')}</div>` : ''}`;
     }).join('');
     html = walk('') + S.questions.filter(q => !q.folderId).map(qItem).join('');
@@ -1962,14 +1980,12 @@ function fitStatWrap(){
 }
 window.addEventListener('resize', () => { if (S.view === 'stats') fitStatWrap(); });
 
-/* ---------- 문제 미리보기: data-hq="문제 id" 에 마우스를 올리면 문제 내용을 띄움 ---------- */
+/* ---------- 문제 미리보기: data-hq="문제 id" 에 마우스를 올리면 문제 내용을 띄움 ----------
+ * 누르면 그 자리에 고정 ([크게 보기] · ×). 같은 문제를 다시 누르거나, 바깥을 누르거나, Esc 면 닫힘 */
 (function bindPeek(){
-  let tip = null, cur = null;
-  const hide = () => { if (tip) tip.remove(); tip = null; cur = null; };
-  document.addEventListener('mouseover', e => {
-    const el = e.target.closest && e.target.closest('[data-hq]');
-    if (!el) return;
-    if (el === cur) return;
+  let tip = null, cur = null, pinned = false;
+  const hide = () => { if (tip) tip.remove(); tip = null; cur = null; pinned = false; };
+  const show = el => {
     hide();
     const q = S.questions.find(x => x.id === el.dataset.hq);
     if (!q) return;
@@ -1978,19 +1994,71 @@ window.addEventListener('resize', () => { if (S.view === 'stats') fitStatWrap();
     tip.className = 'q-peek';
     tip.innerHTML = renderQ(q, {answer:true});
     document.body.appendChild(tip);
-    const r = el.getBoundingClientRect(), w = Math.min(460, window.innerWidth - 24);
-    tip.style.width = w + 'px';
-    const left = r.left - w - 12 >= 8 ? r.left - w - 12 : Math.min(window.innerWidth - w - 8, r.right + 12);
-    tip.style.left = Math.max(8, left) + 'px';
-    tip.style.top = Math.max(8, Math.min(window.innerHeight - tip.offsetHeight - 8, r.top - 20)) + 'px';
+    const place = () => {
+      if (!tip || cur !== el) return;
+      const r = el.getBoundingClientRect(), w = Math.min(460, window.innerWidth - 24), room = window.innerHeight - 16;
+      tip.style.width = w + 'px'; tip.style.transform = '';
+      // 화면보다 길면 잘리지 않게 통째로 줄여서 보여 줌
+      const h = tip.offsetHeight, k = h > room ? room / h : 1;
+      if (k < 1) { tip.style.transform = `scale(${k})`; tip.style.animation = 'none'; }   // 열리는 효과(transform)가 줄이기를 덮지 않게
+      const W = w * k, Hk = h * k;
+      const left = r.left - W - 12 >= 8 ? r.left - W - 12 : Math.min(window.innerWidth - W - 8, r.right + 12);
+      tip.style.left = Math.max(8, left) + 'px';
+      tip.style.top = Math.max(8, Math.min(window.innerHeight - Hk - 8, r.top - 20)) + 'px';
+    };
+    place();
+    // 그림이 늦게 불러와져 크기가 바뀌면 다시 맞춤 (transform 은 크기 변화로 치지 않아 되풀이되지 않음)
+    if (window.ResizeObserver) new ResizeObserver(place).observe(tip);
+    $$('img', tip).forEach(im => { if (!im.complete) im.addEventListener('load', place); });
+  };
+  const pin = () => {
+    if (!tip) return;
+    pinned = true;
+    tip.classList.add('pinned');
+    const bar = document.createElement('div');
+    bar.className = 'q-peek-bar';
+    bar.innerHTML = '<span>📌 고정됨</span><span class="grow"></span><button class="btn" data-peek="big">크게 보기</button><button class="btn ghost" data-peek="close" title="닫기 (Esc)">×</button>';
+    tip.prepend(bar);
+  };
+  document.addEventListener('mouseover', e => {
+    if (pinned) return;
+    const el = e.target.closest && e.target.closest('[data-hq]');
+    if (el && el !== cur) show(el);
   });
+  document.addEventListener('click', e => {
+    const t = e.target;
+    if (tip && tip.contains(t)) {
+      const b = t.closest('[data-peek]');
+      if (b && b.dataset.peek === 'close') hide();
+      else if (b && b.dataset.peek === 'big') { const id = cur && cur.dataset.hq; hide(); if (id) qPopup(id); }
+      return;
+    }
+    const el = t.closest && t.closest('[data-hq]');
+    if (el) {
+      if (pinned && cur === el) return hide();
+      if (cur !== el || !tip) show(el);
+      pin();
+      return;
+    }
+    if (pinned) hide();
+  });
+  document.addEventListener('keydown', e => { if (pinned && e.key === 'Escape') hide(); });
   document.addEventListener('mouseout', e => {
-    if (!cur) return;
+    if (!cur || pinned) return;
     const to = e.relatedTarget;
     if (!to || !cur.contains(to)) hide();
   });
-  document.addEventListener('scroll', hide, true);
+  document.addEventListener('scroll', e => { if (!pinned || !tip || !tip.contains(e.target)) hide(); }, true);
 })();
+/** 문제 크게 보기 (개념 지도에서는 이 개념의 응답 · 정답률도 함께) */
+function qPopup(qid){
+  const q = S.questions.find(y => y.id === qid);
+  if (!q) return toast('문제를 찾을 수 없어요', true);
+  const n = CM && CM.data && CM.data.nodes.find(x => x.id === CM.sel);
+  const st = n && n.stat && n.stat.qs.find(y => y.id === qid);
+  modal({title:q.title || '문제', wide:true, body:(st ? `<div class="an-sub" style="margin:-4px 0 10px">이 개념 응답 ${st.n}건 · 정답률 <b style="color:${lvColor(st.rate, st.n)}">${st.n ? pctStr(st.rate) : '-'}</b></div>` : '') +
+    `<div class="q-pop">${renderQ(q, {answer:true, mis:true, concepts:true, noTitle:true})}</div>`});
+}
 
 async function renderStats(){
   const subject = S.params.subject;
@@ -2095,14 +2163,15 @@ function drawLinks(temp){
   const unitOf = {};
   CM.data.nodes.forEach(n => { if (n.kind === 'unit') unitOf[n.name] = n; });
   const member = CM.data.nodes.filter(n => n.kind !== 'unit' && n.unit && unitOf[n.unit] && !has(n.id, unitOf[n.unit].id))
-    .map(n => { const u = unitOf[n.unit]; return `<line class="member" x1="${u.x}" y1="${u.y - 4}" x2="${n.x}" y2="${n.y - 4}"/>`; }).join('');
+    .map(n => { const u = unitOf[n.unit]; return `<line class="member" data-a="${u.id}" data-b="${n.id}" x1="${u.x}" y1="${u.y - 4}" x2="${n.x}" y2="${n.y - 4}"/>`; }).join('');
   svg.innerHTML = member + CM.data.links.map(l => {
     const a = pos[l.from], b = pos[l.to];
     if (!a || !b) return '';
     // AI가 이은 선: 관련 정도(weight)만큼 굵고 진하게 · 직접 이은 선: 기본 굵기
     const w = l.weight == null ? '' : ` style="stroke-width:${(1 + l.weight * 5).toFixed(1)}px;opacity:${(0.35 + l.weight * 0.6).toFixed(2)}"`;
-    return `<g data-lid="${l.id}"><title>${l.weight == null ? '직접 이은 연결' : 'AI 연결 · 관련 정도 ' + Math.round(l.weight * 100) + '%'}</title><line class="hit" x1="${a.x}" y1="${a.y - 4}" x2="${b.x}" y2="${b.y - 4}"/><line class="vis${l.weight == null ? '' : ' ai'}" x1="${a.x}" y1="${a.y - 4}" x2="${b.x}" y2="${b.y - 4}"${w}/></g>`;
+    return `<g data-lid="${l.id}" data-a="${l.from}" data-b="${l.to}"><title>${l.weight == null ? '직접 이은 연결' : 'AI 연결 · 관련 정도 ' + Math.round(l.weight * 100) + '%'}</title><line class="hit" x1="${a.x}" y1="${a.y - 4}" x2="${b.x}" y2="${b.y - 4}"/><line class="vis${l.weight == null ? '' : ' ai'}" x1="${a.x}" y1="${a.y - 4}" x2="${b.x}" y2="${b.y - 4}"${w}/></g>`;
   }).join('') + (temp ? `<line class="temp" x1="${temp.x1}" y1="${temp.y1}" x2="${temp.x2}" y2="${temp.y2}"/>` : '');
+  applyHl();
   $$('g[data-lid]', svg).forEach(g => g.onclick = async () => {
     const l = CM.data.links.find(x => x.id === g.dataset.lid);
     const na = CM.data.nodes.find(n => n.id === l.from), nb = CM.data.nodes.find(n => n.id === l.to);
@@ -2132,30 +2201,100 @@ function bindNode(el, n){
     window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up);
   };
   handle.onpointerdown = linkDrag;
+  el.onpointerenter = () => { if (!CM.drag) { CM.hl = n.id; applyHl(); } };
+  el.onpointerleave = () => { if (!CM.drag && CM.hl === n.id) { CM.hl = null; applyHl(); } };
   tile.onpointerdown = e => {
     if (CM.linkMode) return linkDrag(e);
     e.preventDefault();
     const s = stagePoint(e), ox = n.x, oy = n.y;
-    let moved = false;
+    let sim = null;
     const mv = ev => {
       const p = stagePoint(ev);
-      if (!moved && Math.hypot(p.x - s.x, p.y - s.y) < 4) return;
-      moved = true;
-      n.x = Math.max(50, ox + p.x - s.x); n.y = Math.max(50, oy + p.y - s.y);
-      el.style.left = n.x + 'px'; el.style.top = n.y + 'px';
-      drawLinks();
+      if (!sim && Math.hypot(p.x - s.x, p.y - s.y) < 4) return;
+      if (!sim) { sim = cmSim(n); CM.drag = n.id; CM.hl = n.id; applyHl(); $('#cmap').classList.add('dragging'); }
+      sim.grab(Math.max(50, ox + p.x - s.x), Math.max(50, oy + p.y - s.y));
     };
     const up = () => {
       window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up);
-      if (moved) {
-        n.x = Math.round(n.x / GRID) * GRID; n.y = Math.round(n.y / GRID) * GRID;   // 칸에 맞춰 줄이 흐트러지지 않게
-        el.style.left = n.x + 'px'; el.style.top = n.y + 'px'; drawLinks();
-        saveNodePositions(); if (n.x + 260 > CM.W || n.y + 200 > CM.H) drawMap();
-      }
+      if (sim) { sim.release(); CM.drag = null; $('#cmap').classList.remove('dragging'); }
       else { CM.sel = CM.sel === n.id ? null : n.id; $$('.cnode').forEach(x => x.classList.toggle('sel', x.dataset.id === CM.sel)); drawSide(); }
     };
     window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up);
   };
+}
+/** 마우스를 올린(끄는) 노드와 바로 이어진 노드 · 선만 또렷하게, 나머지는 흐리게 */
+function applyHl(){
+  const map = $('#cmap');
+  if (!map || !CM) return;
+  const id = CM.hl, near = new Set(id ? [id] : []);
+  if (id) $$('#clinks [data-a]').forEach(g => { if (g.dataset.a === id) near.add(g.dataset.b); if (g.dataset.b === id) near.add(g.dataset.a); });
+  map.classList.toggle('focus', !!id);
+  $$('.cnode', map).forEach(x => x.classList.toggle('hl', near.has(x.dataset.id)));
+  $$('#clinks [data-a]').forEach(g => g.classList.toggle('hl', !!id && (g.dataset.a === id || g.dataset.b === id)));
+}
+/**
+ * 끌기 물리 (옵시디언 그래프처럼): 끄는 노드는 마우스를 따라가고, 연결선(과 단원 소속)은 끌기 시작할 때 길이를 지키려는 스프링이라
+ * 바로 이어진 노드는 많이, 멀리 이어진 노드는 조금 따라와요 (모든 노드는 원래 자리에 약하게 묶여 있어 지도 전체가 끌려가지 않음).
+ * 노드끼리는 처음보다 더 가까워지면 밀어냄. 놓으면 움직임이 잦아들 때까지 이어서 움직이다 멈추고 위치를 저장해요.
+ */
+function cmSim(dragged){
+  const nodes = CM.data.nodes, byId = new Map(nodes.map(x => [x.id, x]));
+  const els = new Map($$('#cstage .cnode').map(e => [e.dataset.id, e]));
+  const edges = [], seen = new Set();
+  const addEdge = (a, b, k) => {
+    const key = a.id < b.id ? a.id + '|' + b.id : b.id + '|' + a.id;
+    if (seen.has(key)) return; seen.add(key);
+    edges.push({a, b, k, len:Math.max(90, Math.hypot(a.x - b.x, a.y - b.y))});
+  };
+  CM.data.links.forEach(l => { const a = byId.get(l.from), b = byId.get(l.to); if (a && b) addEdge(a, b, 0.06); });
+  const unitOf = {}; nodes.forEach(x => { if (x.kind === 'unit') unitOf[x.name] = x; });
+  nodes.forEach(x => { const u = x.kind !== 'unit' && x.unit && unitOf[x.unit]; if (u) addEdge(u, x, 0.015); });
+  const vel = new Map(nodes.map(x => [x.id, {x:0, y:0}]));
+  const home = new Map(nodes.map(x => [x.id, {x:x.x, y:x.y}]));   // 원래 자리 (약한 스프링)
+  const near = nodes.map((a, i) => nodes.map((b, j) => (j > i ? Math.min(120, Math.hypot(a.x - b.x, a.y - b.y)) : 0)));   // 밀어내기 시작 거리
+  let target = {x:dragged.x, y:dragged.y}, held = true, raf = 0, calm = 0, after = 0;
+  const step = () => {
+    const f = new Map(nodes.map(x => [x.id, {x:0, y:0}]));
+    edges.forEach(e => {
+      const dx = e.b.x - e.a.x, dy = e.b.y - e.a.y, d = Math.hypot(dx, dy) || 0.01, s = (d - e.len) * e.k;
+      const fx = dx / d * s, fy = dy / d * s;
+      f.get(e.a.id).x += fx; f.get(e.a.id).y += fy; f.get(e.b.id).x -= fx; f.get(e.b.id).y -= fy;
+    });
+    for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) {
+      const a = nodes[i], b = nodes[j], dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 0.01, lim = near[i][j];
+      if (d >= lim) continue;
+      const s = (lim - d) * 0.05, fx = dx / d * s, fy = dy / d * s;
+      f.get(a.id).x -= fx; f.get(a.id).y -= fy; f.get(b.id).x += fx; f.get(b.id).y += fy;
+    }
+    nodes.forEach(x => { const h = home.get(x.id), g = f.get(x.id); g.x += (h.x - x.x) * 0.02; g.y += (h.y - x.y) * 0.02; });
+    let maxV = 0;
+    nodes.forEach(x => {
+      const v = vel.get(x.id);
+      if (x === dragged) { x.x = target.x; x.y = target.y; v.x = v.y = 0; return; }   // 놓은 뒤에도 놓은 자리에 고정
+      v.x = (v.x + f.get(x.id).x) * 0.72; v.y = (v.y + f.get(x.id).y) * 0.72;
+      const sp = Math.hypot(v.x, v.y); if (sp > 30) { v.x *= 30 / sp; v.y *= 30 / sp; }
+      x.x = Math.max(50, x.x + v.x); x.y = Math.max(50, x.y + v.y);
+      maxV = Math.max(maxV, Math.abs(v.x) + Math.abs(v.y));
+    });
+    nodes.forEach(x => { const e = els.get(x.id); if (e) { e.style.left = x.x + 'px'; e.style.top = x.y + 'px'; } });
+    drawLinks();
+    if (!held) {
+      after++;
+      calm = maxV < 0.15 ? calm + 1 : 0;
+      if (calm > 8 || after > 300) return finish();
+    }
+    raf = requestAnimationFrame(step);
+  };
+  const finish = () => {
+    cancelAnimationFrame(raf);
+    if (!CM) return;
+    nodes.forEach(x => { x.x = Math.round(x.x); x.y = Math.round(x.y); });
+    saveNodePositions();
+    if (nodes.some(x => x.x + 260 > CM.W || x.y + 200 > CM.H)) drawMap(); else drawLinks();
+  };
+  raf = requestAnimationFrame(step);
+  // 놓으면: 다른 노드들은 지금 자리를 새 '원래 자리'로 삼아 그 근처에서 자리 잡음 (처음 자리로 되돌아가지 않게)
+  return {grab:(x, y) => { target = {x, y}; }, release:() => { held = false; nodes.forEach(x => home.set(x.id, {x:x.x, y:x.y})); }};
 }
 function drawSide(){
   const side = $('#cside');
@@ -2211,9 +2350,9 @@ function drawSide(){
     <div class="side-sec"><h4>오개념 목록 <small style="color:var(--sub);font-weight:400">(${misList.length})</small></h4>
       ${misList.map(m => `<div class="mis-item mis-def"><span style="flex:1;cursor:pointer" data-medit="${m.id}" title="눌러서 고치기">${esc(m.name)}${m.desc ? `<div style="font-size:12px;color:var(--sub)">${esc(m.desc)}</div>` : ''}</span><button class="btn ghost" data-mdel="${m.id}" title="삭제">×</button></div>`).join('') || '<div style="color:#9aa0ac;font-size:13px">이 개념의 오개념이 아직 없어요.</div>'}
       <input class="inp" id="nMisNew" placeholder="새 오개념 입력 후 Enter" style="margin-top:6px"></div>
-    <div class="side-sec"><h4>학생 응답에서 나타난 오개념</h4>${s.mis.length ? s.mis.map(m => `<div class="mis-item"><div style="display:flex;gap:8px"><span style="flex:1">${esc(m.text)}</span><b>${m.count}명</b></div>
+    <div class="side-sec"><h4>학생 응답에서 나타난 오개념</h4>${s.mis.length ? s.mis.map(m => `<div class="mis-item"><div style="display:flex;gap:8px"><span style="flex:1">${esc(m.text)}</span><b>${m.count}회</b></div>
       <div class="bar"><b style="width:${m.count / maxMis * 100}%"></b></div></div>`).join('') : '<div style="color:#9aa0ac;font-size:13px">기록된 오개념이 없어요.<br>(문제의 오답 선지에 오개념을 적어 두면 여기에 모여요)</div>'}</div>
-    <div class="side-sec"><h4>연결된 문제 (${s.qs.length})</h4>${s.qs.length ? s.qs.map(q => `<div class="side-q" data-hq="${esc(q.id)}"><span style="flex:1">${esc(q.title)}</span><span style="color:${lvColor(q.rate, q.n)}">${q.n ? pctStr(q.rate) + ` (${q.n})` : '응답 없음'}</span></div>`).join('') : '<div style="color:#9aa0ac;font-size:13px">문제은행의 문제 편집 화면에서 이 개념을 연결할 수 있어요.</div>'}</div>`;
+    <div class="side-sec"><h4>연결된 문제 (${s.qs.length})</h4>${s.qs.length ? s.qs.map(q => `<div class="side-q" data-hq="${esc(q.id)}" title="눌러서 고정"><span style="flex:1">${esc(q.title)}</span><span style="color:${lvColor(q.rate, q.n)}">${q.n ? pctStr(q.rate) + ` (${q.n})` : '응답 없음'}</span></div>`).join('') : '<div style="color:#9aa0ac;font-size:13px">문제은행의 문제 편집 화면에서 이 개념을 연결할 수 있어요.</div>'}</div>`;
   $('#nSave').onclick = async () => { applyMap(await call('saveNode', {id:n.id, subject:CM.subject, kind:'concept', unit:$('#nUnit').value, name:$('#nName').value, desc:$('#nDesc').value, x:n.x, y:n.y, classId:CM.classId})); toast('저장했어요'); };
   const misSave = async m => { setMisList(CM.subject, await call('saveMisconception', m)); drawSide(); };
   $('#nMisNew').onkeydown = e => {
@@ -2486,7 +2625,7 @@ function autoLayoutModal(){
     ['force', '관계망 (자유 배치)', '연결선으로 이어진 개념끼리 가까이, 나머지는 멀리 — 연결 구조가 잘 보여요.'],
     ['circle', '원형', '모든 노드를 단원 순서대로 큰 원 위에 놓아요.']
   ];
-  modal({title:'자동 배치', body:opts.map((o, i) => `<label class="pc-item" style="padding:9px 10px;border:1px solid var(--line);margin-bottom:6px"><input type="radio" name="lay" value="${o[0]}" ${i === 0 ? 'checked' : ''}> <b>${o[1]}</b><div class="an-sub" style="margin:2px 0 0 22px">${o[2]}</div></label>`).join('') +
+  modal({title:'자동 배치', body:opts.map((o, i) => `<label class="pc-item" style="padding:9px 10px;border:1px solid var(--line);margin-bottom:6px"><input type="radio" name="lay" value="${o[0]}" ${o[0] === 'force' ? 'checked' : ''}> <b>${o[1]}</b><div class="an-sub" style="margin:2px 0 0 22px">${o[2]}</div></label>`).join('') +
     '<div class="an-sub">배치한 뒤에도 노드를 끌어 자유롭게 옮길 수 있고, [배치 되돌리기]로 원래대로 돌릴 수 있어요.</div>',
     buttons:[{label:'취소'}, {label:'배치하기', primary:true, onClick:bg => applyLayout($('input[name=lay]:checked', bg).value)}]});
 }
@@ -2525,9 +2664,9 @@ function renderSettings(){
       <div class="copy-url"><input class="inp" id="stuUrl" readonly value="${esc(studentUrl())}"><button class="btn" id="cpUrl">복사</button></div></div>
     <div class="set-sec"><h3>OpenAI (AI 문제 제작)</h3><p class="d">API 키는 Vercel 프로젝트의 환경변수 <b>OPENAI_API_KEY</b> 로 관리해요. (화면에서 입력하지 않아요)
       현재 상태: <b>${S.settings.hasKey ? '키 등록됨' : '키 없음'}</b></p>
-      <label class="f">글 모델 (문제 만들기 · 서식 정리 · 출제 조언)</label><input class="inp" id="setModel" value="${esc(S.settings.model || 'gpt-4o-mini')}">
-      <label class="f">그림 모델 (AI로 그림 만들기)</label><input class="inp" id="setImgModel" list="imgModels" value="${esc(S.settings.imageModel || 'gpt-image-1.5')}">
-      <datalist id="imgModels"><option value="gpt-image-1.5"><option value="gpt-image-2"><option value="gpt-image-1-mini"></datalist>
+      <label class="f">글 모델 (문제 만들기 · 서식 정리 · 출제 조언)</label><input class="inp" id="setModel" list="txtModels" value="${esc(S.settings.model || 'gpt-6-luna')}"><datalist id="txtModels"><option value="gpt-6-luna"></datalist>
+      <label class="f">그림 모델 (AI로 그림 만들기)</label><input class="inp" id="setImgModel" list="imgModels" value="${esc(S.settings.imageModel || 'gpt-image-2.5-sunburst')}">
+      <datalist id="imgModels"><option value="gpt-image-2.5-sunburst"><option value="gpt-image-1.5"><option value="gpt-image-2"><option value="gpt-image-1-mini"></datalist>
       <p class="d" style="margin:4px 0 0">그림은 그림을 만들 수 있는 모델로 따로 만들어요. 적은 모델을 쓸 수 없으면 이 키로 쓸 수 있는 다른 그림 모델로 한 번 더 시도해요.</p>
       <div style="margin-top:10px;display:flex;gap:6px"><button class="btn primary" id="saveKey">저장</button></div></div>
     <div class="set-sec"><h3>학기 관리</h3><p class="d">클래스를 만들 때 이 기간의 달력으로 수업 차시가 자동 생성돼요.</p>

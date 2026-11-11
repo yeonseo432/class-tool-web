@@ -4,7 +4,7 @@ import { ApiError, must, type Ctx } from './core';
 /*
  * OpenAI 호출 (legacy Code.js openai_)
  * - 키: Vercel 환경변수 OPENAI_API_KEY (기존: 설정 화면 → Script Properties)
- * - 모델: 교사 설정(teacher_settings.openai_model), 기본 gpt-4o-mini
+ * - 모델: 교사 설정(teacher_settings.openai_model), 기본 gpt-6-luna
  * - 응답은 JSON 모드로 받아 객체로 돌려줌
  * - OPENAI_BASE_URL 로 다른 주소(시험용 가짜 서버 등)를 쓸 수 있음
  */
@@ -17,23 +17,23 @@ const apiKey = () => String(process.env.OPENAI_API_KEY || '').trim().replace(/(\
 export const hasOpenAI = () => !!apiKey();
 
 /** 그림 모델 우선순위: 설정한 모델을 못 쓰면 이 키로 쓸 수 있는 모델 중 앞의 것부터 */
-const IMAGE_PREFS = ['gpt-image-1.5', 'gpt-image-2', 'gpt-image-1', 'gpt-image-1-mini', 'chatgpt-image-latest', 'dall-e-3'];
+const IMAGE_PREFS = ['gpt-image-2.5-sunburst', 'gpt-image-1.5', 'gpt-image-2', 'gpt-image-1', 'gpt-image-1-mini', 'chatgpt-image-latest', 'dall-e-3'];
 
 async function modelOf({ sb }: Ctx) {
   const row = must(await sb.from('teacher_settings').select('openai_model').maybeSingle());
-  return row?.openai_model || 'gpt-4o-mini';
+  return row?.openai_model || 'gpt-6-luna';
 }
 
 /**
  * 그림 만들기 (OpenAI Images) → 그림 바이트.
- * 모델은 교사 설정(teacher_settings.image_model) → 환경변수 OPENAI_IMAGE_MODEL → 기본 gpt-image-1.5.
+ * 모델은 교사 설정(teacher_settings.image_model) → 환경변수 OPENAI_IMAGE_MODEL → 기본 gpt-image-2.5-sunburst.
  * 그 모델을 못 쓰면(없는 모델 · 권한 없음) 이 키의 모델 목록에서 쓸 수 있는 그림 모델을 찾아 한 번 더 시도해요.
  */
 export async function openaiImage(prompt: string, model?: string, timeoutMs = 150_000): Promise<{ bytes: Buffer; type: 'image/png'; note?: string }> {
   const key = apiKey();
   if (!key) throw new ApiError('OpenAI API 키가 없어요. Vercel 프로젝트 환경변수 OPENAI_API_KEY 를 설정해 주세요.');
   const base = (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, '');
-  const first = model || process.env.OPENAI_IMAGE_MODEL || 'gpt-image-1.5';
+  const first = model || process.env.OPENAI_IMAGE_MODEL || 'gpt-image-2.5-sunburst';
   const started = Date.now();
   const once = async (model: string) => {
     // dall-e 는 quality 값이 다르고 프롬프트 길이 제한이 있음. response_format 은 보내지 않음(지원하지 않는 계정이 있음) → b64_json 이나 url 둘 다 받음

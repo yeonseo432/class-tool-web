@@ -405,7 +405,8 @@ type Stats = ReturnType<typeof computeStats>;
  *    아래 1/3 = 약점, 위 1/3 = 강점, 나머지 = 보통 (응답이 없는 개념은 '자료 없음')
  *  - 오개념은 '선택 비율' = 고른 응답 / 그 오개념 선지가 있던 문항의 응답 (개념마다 문항 수가 달라도 비교할 수 있게)
  *  - 시험 목적별로 [개념 가중치 · 오개념 문항 비율 · 배점 가중치 · 전 개념 포함 여부]가 달라요.
- *  - 문항 수 · 배점은 최대 잔여법으로 정수(배점 단위) 배분
+ *  - 문항 수 · 배점은 최대 잔여법으로 정수(배점 단위) 배분. 배점은 권장 난이도가 먼저(어려울수록 높게), 같은 난이도 안에서 개념(시험 목적별 가중치)
+ *  - 문항 순서는 쉬운 문항 → 어려운 문항, 같은 난이도 안에서는 난이도를 정한 근거(개념의 상대 위치 · 오개념)가 같은 문항끼리
  */
 type Tag = '약점' | '보통' | '강점' | '자료 없음';
 type Slot = {
@@ -427,10 +428,8 @@ const EXAM_PURPOSES: Record<string, Purpose> = {
     label: '최소 성취기준 확인', misShare: 0.2, coverage: true,
     cw: { 약점: 2, 보통: 1.3, 강점: 1, '자료 없음': 1.3 }, pw: () => 1,
     why: [
-      '출제 범위의 모든 개념을 최소 1문항씩 넣어 빠짐없이 확인하면 좋아요.',
-      '상대적으로 약한 개념에 문항을 더 두어, 기준에 도달했는지 여러 번 확인해 보세요.',
-      '선택 비율이 높은 오개념은 오답 선지로 넣어, 그 오개념이 남아 있는지 함께 확인해 보세요.',
-      '배점은 균등하게 두면 개념별 도달 여부가 점수에 고르게 반영돼요.',
+      '범위의 모든 개념을 1문항 이상, 기본 수준으로 물어요.',
+      '약한 개념은 한 번 더 묻고, 배점 차이는 난이도만큼만 둬요.',
     ],
     level: {
       약점: ['쉬움', '약한 개념은 기초 수준으로 물어 최소 기준에 도달했는지 확인하면 좋아요'],
@@ -445,10 +444,8 @@ const EXAM_PURPOSES: Record<string, Purpose> = {
     cw: { 약점: 1.5, 보통: 1.4, 강점: 0.6, '자료 없음': 1 },
     pw: (s) => (s.kind === 'mis' ? 1.2 : s.tag === '약점' ? 1.3 : s.tag === '강점' ? 0.8 : 1),
     why: [
-      '반 전체가 이미 잘하는 강점 개념은 학생 간 차이를 거의 만들지 않으니 비중을 줄이는 걸 권해요.',
-      '상대적으로 약하거나 중간인 개념에 문항을 모으면 학생 간 차이가 잘 드러나요.',
-      '선택 비율이 높은 오개념을 오답 선지로 넣으면 개념을 정확히 아는 학생과 아닌 학생이 갈려요 (매력적 오답).',
-      '약점 개념 · 오개념 문항의 배점은 조금 높이고, 강점 개념 문항은 낮추는 걸 권해요.',
+      '반이 잘하는 개념은 줄이고, 중간 · 약한 개념과 매력적 오답에 문항을 모아요.',
+      '어려운 문항일수록 배점을 높여 학생 간 차이가 드러나게 해요.',
     ],
     level: {
       약점: ['보통', '약한 개념을 너무 어렵게 내면 대부분 틀려 변별이 안 되니 보통 수준을 권해요'],
@@ -462,10 +459,8 @@ const EXAM_PURPOSES: Record<string, Purpose> = {
     label: '학습 결손 진단', misShare: 0.4, coverage: false,
     cw: { 약점: 3, 보통: 1, 강점: 0.3, '자료 없음': 1 }, pw: () => 1,
     why: [
-      '상대적으로 약한 개념에 문항의 대부분을 두면 어디서 막히는지 자세히 볼 수 있어요.',
-      '오개념 문항 비율을 크게 두고, 선택 비율이 높은 오개념부터 확인해 보세요.',
-      '강점 개념은 확인용으로 최소한만 넣어도 충분해요.',
-      '진단이 목적이니 배점은 균등하게 두는 걸 권해요.',
+      '약한 개념과 자주 고른 오개념에 문항을 모아요.',
+      '쉬운 문항부터 물어 어디서 막히는지 찾아요.',
     ],
     level: {
       약점: ['쉬움', '어디서 막히는지 보려면 기초부터 묻는 쉬운 문항이 좋아요'],
@@ -566,15 +561,23 @@ function planExam(ST: Stats, D: Data, opt: ExamOpt) {
   // 문항마다 권하는 난이도
   slots.forEach((s) => { const [lv, why] = P.level[s.tag]; s.level = lv; s.levelWhy = why; });
 
-  // 배점
+  // 배점: 권장 난이도가 먼저(어려울수록 높게), 같은 난이도 안에서는 개념(시험 목적별 가중치)으로 조금씩
+  //   난이도 사이 간격(0.35~0.4)이 개념 조정 폭(±0.08)보다 커서, 더 어려운 문항이 더 낮은 배점을 받지 않아요
   const units = Math.round(T / step);
-  const pu = hamilton(slots.map(P.pw), units, units >= slots.length ? slots.map(() => 1) : null);
-  slots.forEach((s, i) => (s.points = Math.round(pu[i] * step * 100) / 100));
+  const LV_W = { 쉬움: 1, 보통: 1.35, 어려움: 1.75 } as const;
+  const ws = slots.map((s) => LV_W[s.level!] + 0.25 * (P.pw(s) - 1));
+  const pu = hamilton(ws, units, units >= slots.length ? slots.map(() => 1) : null);
+  // 반올림으로 순서가 뒤집히지 않게: 가중치가 큰 문항에 큰 배점이 가도록 다시 나눔 (합계는 그대로)
+  const byW = slots.map((_, i) => i).sort((a, b) => ws[a] - ws[b]);
+  const sortedPu = byW.map((i) => pu[i]).sort((a, b) => a - b);
+  byW.forEach((i, k) => (slots[i].points = Math.round(sortedPu[k] * step * 100) / 100));
 
-  // 문항 순서: 개념 지도 순서(단원 → 개념)대로, 같은 개념이면 개념 문항 → 오개념 문항
+  // 문항 순서: 쉬운 문항 → 어려운 문항. 같은 난이도에서는 근거가 같은 문항끼리(약점 · 보통 · 강점 개념 → 오개념), 그 안에서는 개념 지도 순서
+  const LV_ORDER = { 쉬움: 0, 보통: 1, 어려움: 2 } as const;
+  const TAG_ORDER = ['약점', '보통', '강점', '자료 없음', '오개념'];
   const order = new Map(C.slice().sort((a, b) => (a.unit || '').localeCompare(b.unit || '', 'ko') || a.name.localeCompare(b.name, 'ko')).map((c, i) => [c.id, i]));
   const ordOf = (s: Slot) => Math.min(...s.conceptIds.map((id) => order.get(id) ?? 999), 999);
-  slots.sort((a, b) => ordOf(a) - ordOf(b) || (a.kind === b.kind ? 0 : a.kind === 'concept' ? -1 : 1));
+  slots.sort((a, b) => LV_ORDER[a.level!] - LV_ORDER[b.level!] || TAG_ORDER.indexOf(a.tag) - TAG_ORDER.indexOf(b.tag) || ordOf(a) - ordOf(b));
   slots.forEach((s, i) => { s.no = i + 1; s.conceptNames = s.conceptIds.map((id) => cName.get(id) ?? '?'); });
 
   bankCandidates(slots, D, ST);
@@ -591,23 +594,13 @@ function planExam(ST: Stats, D: Data, opt: ExamOpt) {
     byKind[k].items++; byKind[k].points += s.points;
   });
   const kindOrder = ['약점 개념', '보통 개념', '강점 개념', '자료 없음 개념', '오개념 확인'];
-  const names = (tag: Tag) => C.filter((c) => c.tag === tag).map((c) => c.name);
-  const share = (tag: Tag) => {
-    const it = slots.filter((s) => s.kind === 'concept' && s.tag === tag);
-    return { items: it.length, points: it.reduce((a, s) => a + s.points, 0) };
-  };
   const misSlots = slots.filter((s) => s.kind === 'mis');
 
-  // 데이터로 채운 설계 요약 (시험 목적이 이럴 때 이렇게)
+  // 꼭 알아야 할 주의만 짧게 (구성 비율은 '권장 구성' 원그래프로 보여요)
   const facts: string[] = [];
-  const w = share('약점'), st = share('강점');
-  if (names('약점').length) facts.push(`약점 개념 ${names('약점').length}개(${names('약점').slice(0, 4).join(', ')}${names('약점').length > 4 ? ' 등' : ''})에 ${w.items}문항 · ${round(w.points)}점 정도(전체의 ${pct(w.items / N)})를 두는 걸 권해요.`);
-  if (names('강점').length) facts.push(`강점 개념 ${names('강점').length}개(${names('강점').slice(0, 4).join(', ')}${names('강점').length > 4 ? ' 등' : ''})` +
-    (st.items ? `는 ${st.items}문항 · ${round(st.points)}점 정도면 충분해 보여요.` : '는 반이 이미 잘하고 있어 이번 시험에서는 따로 문항을 두지 않아도 괜찮아요.'));
-  if (misSlots.length) facts.push(`선택 비율이 높은 오개념 ${misSlots.length}개(` + misSlots.slice(0, 3).map((s) => `'${s.label}'`).join(', ') + (misSlots.length > 3 ? ' 등' : '') + ')를 확인하는 문항을 출제하면 좋을 것 같아요.');
-  else if (P.misShare > 0) facts.push('선지에 오개념이 연결된 문항의 응답이 아직 없어 오개념 문항은 권하지 않았어요. 문제은행에서 선지에 오개념을 연결해 두면 다음부터 반영돼요.');
-  if (!withData.length) facts.push('이 범위에 형성평가 응답이 없어 모든 개념을 같은 비중으로 나누는 걸 권해요.');
-  if (P.coverage && !cover) facts.push(`문항 수(${nCon})가 개념 수(${C.length})보다 적어 모든 개념을 담기는 어려워요. 문항 수를 늘리거나 출제 범위를 줄여 보세요.`);
+  if (!misSlots.length && P.misShare > 0) facts.push('오개념이 연결된 선지의 응답이 없어 오개념 문항은 넣지 않았어요.');
+  if (!withData.length) facts.push('형성평가 응답이 없어 개념을 같은 비중으로 나눴어요.');
+  if (P.coverage && !cover) facts.push(`문항 수(${nCon})가 개념 수(${C.length})보다 적어 모든 개념을 담지 못해요.`);
 
   return {
     purpose: key, purposeLabel: P.label, n: N, total: T, step,

@@ -371,11 +371,6 @@
   color: #16a34a;
   font-size: 14px;
 }
-.hint {
-  color: var(--sub);
-  font-size: 12.5px;
-  line-height: 1.5;
-}
 .linkBtn {
   display: block;
   margin: 6px auto 0;
@@ -415,6 +410,95 @@
   font-size: 16px;
   line-height: 1.6;
   word-break: keep-all;
+}
+/* 틀린 문제 다시 보기 */
+.reviewBtn {
+  margin-top: 22px;
+  border: 1.5px solid #161616;
+  background: #fff;
+  color: #161616;
+  border-radius: 999px;
+  padding: 10px 22px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.reviewBtn:hover {
+  background: #161616;
+  color: #fff;
+}
+.rvHead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 6px 0 14px;
+  flex-wrap: wrap;
+}
+.rvHead h1 {
+  margin: 0;
+  font-size: 22px;
+  flex: 1;
+}
+.rvCount {
+  font-size: 14px;
+  color: #7a7066;
+}
+.rvEmpty {
+  text-align: center;
+  color: #7a7066;
+  padding: 48px 12px;
+  font-size: 16px;
+}
+.rvItem {
+  margin-bottom: 12px;
+  padding: 0;
+  overflow: hidden;
+}
+.rvTop {
+  width: 100%;
+  border: 0;
+  background: none;
+  text-align: left;
+  padding: 16px 18px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 12px;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+.rvMeta {
+  grid-column: 1;
+  font-size: 13px;
+  color: #7a7066;
+}
+.rvMeta em {
+  font-style: normal;
+  margin-left: 8px;
+  color: #b42323;
+  background: #fdecea;
+  border-radius: 10px;
+  padding: 1px 8px;
+  font-weight: 700;
+}
+.rvStem {
+  grid-column: 1;
+  font-size: 16px;
+  line-height: 1.55;
+  word-break: keep-all;
+}
+.rvArr {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  font-size: 13px;
+  color: #7a7066;
+}
+.rvBody {
+  padding: 0 18px 18px;
+}
+.rvMine {
+  color: #b42323;
 }
 
 /* 휴대폰처럼 좁은 화면: 설정(톱니) 버튼이 보기 · 제출 버튼을 가리지 않게 오른쪽 위 빈자리로 */

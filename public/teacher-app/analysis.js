@@ -13,6 +13,8 @@ var EXM = null;   // 정기고사 출제 가이드 화면 상태
 
 /* ---------- 공통 ---------- */
 function anPct(v){ return v == null || isNaN(v) ? '-' : Math.round(v * 100) + '%'; }
+/** 상대표준편차 (변동계수) = 학생 간 표준편차 ÷ 평균 정답률 */
+function anRsd(c){ return c.sd == null || !c.rate ? '-' : anPct(c.sd / c.rate); }
 function anNum(v, d){ return v == null || isNaN(v) ? '-' : Number(v).toFixed(d == null ? 2 : d); }
 function anColor(rate){
   if (rate == null) return '#4a5163';
@@ -121,9 +123,7 @@ function anRenderBody(){
   body.innerHTML = ({overview:anOverview, map:anMapTab, mis:anMisTab, items:anItemsTab, students:anStudentsTab}[AN.tab] || anOverview)(d);
   if (AN.tab === 'map') anBindMap();
   if (AN.tab === 'items') anBindItems();
-  var hz = $('#anHistZoom'), hb = $('#anHistBox');
-  if (hz) hz.onclick = function(){ anHistModal(d); };
-  if (hb) hb.onclick = function(){ anHistModal(d); };
+  $$('[data-hzoom]', body).forEach(function(b){ b.onclick = function(){ anHistModal(d, b.dataset.hzoom); }; });
   var ss = $('#anStuSort');
   if (ss) ss.onchange = function(){ AN.stuSort = ss.value; anRenderBody(); };
 }
@@ -143,9 +143,18 @@ function anOverview(d){
   var dis = [];
   d.items.forEach(function(it){ it.choices.forEach(function(c){ if (c.flags.indexOf('매력적 오답') >= 0) dis.push({it:it, c:c}); }); });
   dis.sort(function(a, b){ return b.c.rate - a.c.rate; });
-  html += '<div class="an-card an-histcard"><div class="row" style="gap:8px;align-items:center;margin-bottom:6px"><h3 style="margin:0;flex:1">학생 정답률 분포</h3>' +
-      '<button class="btn" id="anHistZoom" style="flex:none" title="크게 보고, 구간을 잘게 나누고, 막대를 눌러 학생 이름을 볼 수 있어요">🔍 확대해서 보기</button></div>' +
-      '<div class="an-histbox" id="anHistBox" title="눌러서 확대">' + anHist(o.hist, ['0', '10', '20', '30', '40', '50', '60', '70', '80', '90'].map(function(x){ return x + '%'; }), {fmt:function(v){ return v + '명'; }, W:900, H:260, fs:13}) + '</div></div>' +
+  var tenLabels = ['0', '10', '20', '30', '40', '50', '60', '70', '80', '90'].map(function(x){ return x + '%'; });
+  var itemHist = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+  d.items.forEach(function(it){ if (it.p != null) itemHist[Math.min(9, Math.floor(it.p * 10 + 1e-9))]++; });
+  var histCard = function(kind, title, sub, vals, unit){
+    return '<div class="an-card"><div class="row" style="gap:8px;align-items:center;margin-bottom:2px"><h3 style="margin:0;flex:1">' + title + '</h3>' +
+      '<button class="btn" data-hzoom="' + kind + '" style="flex:none" title="크게 보고, 구간을 잘게 나누고, 막대를 눌러 누가(어떤 문항이) 있는지 볼 수 있어요">🔍 확대</button></div>' +
+      '<div class="an-sub" style="margin-bottom:6px">' + sub + '</div>' +
+      '<div class="an-histbox" data-hzoom="' + kind + '" title="눌러서 확대">' + anHist(vals, tenLabels, {fmt:function(v){ return v + unit; }, W:560, H:260, fs:13, color:kind === 'items' ? '#c08a3e' : null}) + '</div></div>';
+  };
+  html += '<div class="an-hpair">' +
+    histCard('students', '학생 정답률 분포', '정답률 구간마다 학생이 몇 명인지', o.hist, '명') +
+    histCard('items', '문항 정답률 분포', '정답률 구간마다 문항이 몇 개인지 (예: 30%대 문항 n개)', itemHist, '개') + '</div>' +
     '<div class="an-grid">' +
     '<div class="an-card"><h3>약한 개념</h3><table class="an-t"><tr><th>개념</th><th class="num">정답률</th><th class="num">숙달 학생</th></tr>' +
       weak.map(function(c){ return '<tr><td>' + esc(c.name) + '</td><td class="num">' + anMeter(c.rate) + anPct(c.rate) + '</td><td class="num">' + anPct(c.mastered) + '</td></tr>'; }).join('') + '</table></div>' +
@@ -163,23 +172,27 @@ function anOverview(d){
   return html;
 }
 
-/** 정답률 분포 확대 보기: 큰 그래프 · 구간 너비(20 · 10 · 5%) · 막대를 누르면 그 구간 학생 */
-function anHistModal(d){
-  var rates = d.students.filter(function(s){ return s.n; });
+/** 정답률 분포 확대 보기: 큰 그래프 · 구간 너비(20 · 10 · 5%) · 막대를 누르면 그 구간 학생(문항). kind = 'students' | 'items' */
+function anHistModal(d, kind){
+  var items = kind === 'items';
+  var rates = items
+    ? d.items.filter(function(it){ return it.p != null; }).map(function(it){ return {rate:it.p, name:it.title, n:it.n}; })
+    : d.students.filter(function(s){ return s.n; });
+  var unit = items ? '개' : '명';
   var st = {w:10, sel:null};
   var draw = function(bg){
     var k = Math.round(100 / st.w), vals = [], labels = [], who = [];
     for (var i = 0; i < k; i++) { vals.push(0); labels.push(i * st.w + '%'); who.push([]); }
     rates.forEach(function(s){ var i = Math.min(k - 1, Math.floor(s.rate * k + 1e-9)); vals[i]++; who[i].push(s); });
-    $('#anHzChart', bg).innerHTML = anHist(vals, labels, {fmt:function(v){ return v + '명'; }, W:1000, H:440, fs:st.w < 10 ? 12 : 15, sel:st.sel});
+    $('#anHzChart', bg).innerHTML = anHist(vals, labels, {fmt:function(v){ return v + unit; }, W:1000, H:440, fs:st.w < 10 ? 12 : 15, sel:st.sel, color:items ? '#c08a3e' : null});
     $$('[data-hw]', bg).forEach(function(b){ b.classList.toggle('on', Number(b.dataset.hw) === st.w); });
     var list = st.sel == null ? null : who[st.sel].slice().sort(function(a, b){ return a.rate - b.rate || a.name.localeCompare(b.name, 'ko'); });
-    $('#anHzWho', bg).innerHTML = list == null ? '<span class="an-sub">막대를 누르면 그 구간의 학생이 보여요.</span>'
-      : '<b>' + labels[st.sel] + ' ~ ' + Math.min(100, (st.sel + 1) * st.w) + '%</b> <span class="an-sub">' + list.length + '명</span><div class="an-hzlist">' +
-        (list.length ? list.map(function(s){ return '<span class="chip">' + (d.classes.length > 1 ? esc(s.cls) + ' ' : '') + (s.no != null ? s.no + '번 ' : '') + esc(s.name) + ' <small>' + anPct(s.rate) + '</small></span>'; }).join('') : '<span class="an-sub">없음</span>') + '</div>';
+    $('#anHzWho', bg).innerHTML = list == null ? '<span class="an-sub">막대를 누르면 그 구간의 ' + (items ? '문항' : '학생') + '이 보여요.</span>'
+      : '<b>' + labels[st.sel] + ' ~ ' + Math.min(100, (st.sel + 1) * st.w) + '%</b> <span class="an-sub">' + list.length + unit + '</span><div class="an-hzlist">' +
+        (list.length ? list.map(function(s){ return '<span class="chip">' + (items ? '' : (d.classes.length > 1 ? esc(s.cls) + ' ' : '') + (s.no != null ? s.no + '번 ' : '')) + esc(s.name) + ' <small>' + anPct(s.rate) + (items ? ' · ' + s.n + '회' : '') + '</small></span>'; }).join('') : '<span class="an-sub">없음</span>') + '</div>';
     $$('[data-bin]', bg).forEach(function(r){ r.onclick = function(){ var i = Number(r.dataset.bin); st.sel = st.sel === i ? null : i; draw(bg); }; });
   };
-  modal({title:'학생 정답률 분포 · ' + rates.length + '명', wide:true, body:
+  modal({title:(items ? '문항' : '학생') + ' 정답률 분포 · ' + rates.length + unit, wide:true, body:
       '<div class="row" style="gap:6px;align-items:center;margin-bottom:8px"><span class="an-sub" style="flex:none">구간</span>' +
         [20, 10, 5].map(function(w){ return '<button type="button" class="ex-chip" data-hw="' + w + '">' + w + '%</button>'; }).join('') + '</div>' +
       '<div id="anHzChart" class="an-hzchart"></div><div id="anHzWho" style="margin-top:10px"></div>',
@@ -221,7 +234,7 @@ function anMapSide(d){
   return sel ? '<h3>' + esc(sel.name) + '</h3>' +
       '<table class="an-t"><tr><td>정답률</td><td class="num">' + anPct(sel.rate) + ' (' + sel.c + '/' + sel.n + ')</td></tr>' +
       '<tr><td>숙달 학생 (정답률 70%↑)</td><td class="num">' + anPct(sel.mastered) + ' / ' + sel.students + '명</td></tr>' +
-      '<tr><td>학생 간 편차 (SD)</td><td class="num">' + anPct(sel.sd) + '</td></tr></table>' +
+      '<tr><td>학생 간 상대표준편차</td><td class="num">' + anRsd(sel) + '</td></tr></table>' +
       '<h3 style="margin-top:14px">이 개념에서 나타난 오개념</h3>' + (sel.mis.length ? sel.mis.map(function(m){ return '<div class="an-mi">' + esc(m.name) + ' <b>' + m.count + '회</b></div>'; }).join('') : '<div class="an-sub">없음</div>') +
       '<h3 style="margin-top:14px">연결</h3>' + (d.links.filter(function(l){ return l.from === sel.id || l.to === sel.id; }).map(function(l){
         return '<div class="an-mi">' + esc(l.fromName) + ' → ' + esc(l.toName) + ' <b style="color:' + anLinkColor(l.difficulty) + '">' + anPct(l.difficulty) + '</b></div>'; }).join('') || '<div class="an-sub">없음</div>')
@@ -238,10 +251,10 @@ function anMapTab(d){
       '<div id="anMap" class="an-list">' + anMapList(d) + '</div></div>' +
       '<div class="an-card an-side" id="anMapSide">' + side + '</div></div>' +
     '<div class="an-grid">' +
-    '<div class="an-card"><h3>개념별 숙달도</h3><p class="d">숙달 학생 = 그 개념 문항 정답률이 70% 이상인 학생 비율. 학생 간 편차가 크면 시험에서 변별력이 높은 개념이에요. 응답이 있는 개념만 보여요.</p>' +
-      (conRows.length ? '<div class="an-scroll"><table class="an-t"><tr><th>개념</th><th class="num">응답</th><th class="num">정답률</th><th class="num">숙달 학생</th><th class="num">학생 간 SD</th><th>주요 오개념</th></tr>' +
+    '<div class="an-card"><h3>개념별 숙달도</h3><p class="d">숙달 학생 = 그 개념 문항 정답률이 70% 이상인 학생 비율. 상대표준편차 = 학생 간 표준편차 ÷ 평균 정답률 — 크면 학생마다 차이가 커서 시험에서 변별력이 높은 개념이에요. 응답이 있는 개념만 보여요.</p>' +
+      (conRows.length ? '<div class="an-scroll"><table class="an-t"><tr><th>개념</th><th class="num">응답</th><th class="num">정답률</th><th class="num">숙달 학생</th><th class="num" title="학생 간 표준편차 ÷ 평균 정답률">상대표준편차</th><th>주요 오개념</th></tr>' +
       conRows.map(function(c){
-        return '<tr><td>' + esc(c.name) + '</td><td class="num">' + c.n + '</td><td class="num">' + anMeter(c.rate) + anPct(c.rate) + '</td><td class="num">' + anPct(c.mastered) + '</td><td class="num">' + anPct(c.sd) + '</td><td>' + c.mis.slice(0, 2).map(function(m){ return esc(m.name); }).join(', ') + '</td></tr>';
+        return '<tr><td>' + esc(c.name) + '</td><td class="num">' + c.n + '</td><td class="num">' + anMeter(c.rate) + anPct(c.rate) + '</td><td class="num">' + anPct(c.mastered) + '</td><td class="num">' + anRsd(c) + '</td><td>' + c.mis.slice(0, 2).map(function(m){ return esc(m.name); }).join(', ') + '</td></tr>';
       }).join('') + '</table></div>' : '<div class="empty">응답이 있는 개념이 없어요.</div>') + '</div>' +
     '<div class="an-card"><h3>개념 연결 난이도</h3><p class="d">연결 문항 = 두 개념을 관련지어야 풀 수 있는 문항(예전 AI 분석 결과). 단절률 = 앞 개념을 숙달한 학생 중 뒤 개념은 숙달하지 못한 비율. 계산할 자료가 있는 연결만 보여요.</p>' +
       (linkRows.length ? '<div class="an-scroll"><table class="an-t"><tr><th>연결</th><th class="num">연결 문항 정답률</th><th class="num">단절률</th><th class="num">어려움</th></tr>' +
@@ -290,7 +303,7 @@ function anItemsTab(d){
   if (!d.items.length) return '<div class="empty">응답이 있는 문항이 없어요.</div>';
   var list = anItemsSorted(d);
   if (!AN.item || !list.some(function(it){ return it.id === AN.item; })) AN.item = list[0].id;
-  return '<p class="an-sub" style="margin:0 0 10px">왼쪽에서 문항을 고르면 선지별 응답과 오답이 보여요. 난이도 p = 정답률 · 변별도 D = 상위 27% 정답률 − 하위 27% 정답률 (학생 순위는 그 문항을 뺀 나머지 정답률 기준) · r = 점이연 상관. 선지 막대 오른쪽의 <b>상/하</b>는 상위·하위 집단의 선택률이에요.</p>' +
+  return '<p class="an-sub" style="margin:0 0 10px">왼쪽에서 문항을 고르면 선지별 응답과 오답이 보여요. 난이도 p = 정답률 · 변별도 D = 상위 27% 정답률 − 하위 27% 정답률 (학생 순위는 그 문항을 뺀 나머지 정답률 기준) · r = 점이연 상관. 선지 막대 오른쪽의 <b>상/하</b>는 상위·하위 집단의 선택률이에요. 같은 문제를 여러 차시에서 풀었으면 차시마다 1회로 세어 <b>회</b>로 적어요.</p>' +
     '<div class="an-itemwrap"><div class="an-card an-itemlist"><div class="an-sub" style="margin:0 0 6px">문항 ' + list.length + '개 · 정답률 낮은 순</div>' +
       list.map(function(it){
         var bad = it.D != null && it.D < 0;
@@ -310,17 +323,17 @@ function anBindItems(){
 /** 문항 하나의 자세한 카드 (선지별 응답 · 오답 · 오개념) */
 function anItemCard(it){
       var rows = it.type !== 'short' ? it.choices.map(function(c){
-        return '<div class="an-ch' + (c.correct ? ' right' : '') + '"><b>' + c.no + (c.correct ? ' ✓' : '') + '</b><div><div class="bar"><i style="width:' + Math.round(c.rate * 100) + '%"></i><em>' + c.count + '명 · ' + anPct(c.rate) + '</em></div>' +
+        return '<div class="an-ch' + (c.correct ? ' right' : '') + '"><b>' + c.no + (c.correct ? ' ✓' : '') + '</b><div><div class="bar"><i style="width:' + Math.round(c.rate * 100) + '%"></i><em>' + c.count + '회 · ' + anPct(c.rate) + '</em></div>' +
           '<div class="an-sub" style="margin-top:2px">' + (c.image ? '<img class="an-chimg" src="' + esc(c.image) + '" alt="' + c.no + '번 보기 그림">' : '') + esc(c.text) + ' ' + c.flags.map(function(f){ return anTag(f, f === '매력적 오답' ? 'org' : f === '상위권 유인' ? 'red' : 'gray'); }).join('') +
           (c.mis.length ? '<br>→ ' + c.mis.map(anMisName).map(esc).join(', ') : '') + (c.note ? '<br><i>' + esc(c.note) + '</i>' : '') + '</div></div>' +
           '<div class="an-sub num">상 ' + anPct(c.upRate) + ' · 하 ' + anPct(c.loRate) + '</div></div>';
-      }).join('') + '<div class="an-ch an-dunno"><b>?</b><div><div class="bar"><i style="width:' + Math.round((it.n ? (it.unknown || 0) / it.n : 0) * 100) + '%"></i><em>' + (it.unknown || 0) + '명 · ' + anPct(it.n ? (it.unknown || 0) / it.n : 0) + '</em></div>' +
+      }).join('') + '<div class="an-ch an-dunno"><b>?</b><div><div class="bar"><i style="width:' + Math.round((it.n ? (it.unknown || 0) / it.n : 0) * 100) + '%"></i><em>' + (it.unknown || 0) + '회 · ' + anPct(it.n ? (it.unknown || 0) / it.n : 0) + '</em></div>' +
           '<div class="an-sub" style="margin-top:2px">모르겠어요 (오답으로 셈 · 오개념 집계에서는 빠져요)</div></div><div></div></div>' : (it.shorts.length ? it.shorts.map(function(s){
-        return '<div class="an-ch"><b>✗</b><div>' + esc(s.text) + (s.mis.length ? ' <span class="an-sub">→ ' + s.mis.map(anMisName).map(esc).join(', ') + '</span>' : '') + '</div><div class="an-sub num">' + s.count + '명</div></div>';
+        return '<div class="an-ch"><b>✗</b><div>' + esc(s.text) + (s.mis.length ? ' <span class="an-sub">→ ' + s.mis.map(anMisName).map(esc).join(', ') + '</span>' : '') + '</div><div class="an-sub num">' + s.count + '회</div></div>';
       }).join('') : '<div class="an-sub">오답 없음</div>');
       return '<div class="an-card"><div class="row" style="flex-wrap:wrap;gap:6px;align-items:baseline"><h3 style="flex:none;margin:0">' + esc(it.title) + '</h3>' +
         '<span style="flex:none">' + anDiffLabel(it.p) + anDiscLabel(it.D) + (it.multi ? anTag('정답 여러 개', 'blue') : '') + (it.analyzed ? '' : anTag('오개념 미연결', 'gray')) + '</span><span class="grow"></span>' +
-        '<span class="an-sub" style="flex:none">p ' + anNum(it.p) + ' · D ' + anNum(it.D) + ' · r ' + anNum(it.rpb) + ' · ' + it.n + '명</span></div>' +
+        '<span class="an-sub" style="flex:none">p ' + anNum(it.p) + ' · D ' + anNum(it.D) + ' · r ' + anNum(it.rpb) + ' · 응답 ' + it.n + '회</span></div>' +
         '<div class="an-sub" style="margin:6px 0 8px">' + esc(it.stem) + '</div>' + anConceptChips(it.concepts) + '<div style="margin-top:8px">' + rows + '</div></div>';
 }
 
@@ -346,20 +359,29 @@ function anStudentsTab(d){
  *  2. 정기고사 출제 가이드 — 개념의 상대적 강약 · 오개념 선택 비율로 시험 목적별 설계 추천
  *     (학생 능력 추정 · 절대 난이도 · 예상 점수 분포는 쓰지 않아요)
  * ===================================================================== */
+/** 시험 목적: [키, 이름, 무엇을 알고 싶을 때, 이렇게 내요, 결과로 알 수 있는 것] — 순서대로 카드에 보여요 */
 var EXAM_PURPOSE_INFO = [
-  ['criterion', '최소 성취기준 확인', '모든 학생이 핵심 개념의 기준에 도달했는지 확인해요. 범위의 개념을 빠짐없이 넣고, 상대적으로 약한 개념을 더 여러 번 묻습니다. 배점은 균등하게.'],
-  ['norm', '상대평가 (변별 중심)', '학생 간 차이가 드러나게 해요. 반 전체가 잘하는 강점 개념의 비중을 줄이고, 약하거나 중간인 개념과 자주 고른 오개념(매력적 오답)에 문항을 모읍니다.'],
-  ['diagnostic', '학습 결손 진단', '남아 있는 결손과 오개념을 찾아요. 상대적으로 약한 개념과 선택 비율이 높은 오개념의 비중을 크게 둡니다.']
+  ['criterion', '최소 성취기준 확인', '모두가 기준을 넘었을까?', '범위의 <b>모든 개념</b>을 빠짐없이, <b>기본 수준</b>으로', '개념별 <b>통과 · 미통과</b>'],
+  ['diagnostic', '학습 결손 진단', '어디서, 왜 막혔을까?', '<b>약한 개념 · 자주 고른 오개념</b>만 골라 <b>깊게</b>', '<b>보충할 개념</b>과 <b>고칠 오개념</b>'],
+  ['norm', '상대평가 (변별 중심)', '누가 더 잘할까?', '<b>중간 · 약한 개념</b>과 <b>매력적 오답</b>에 집중', '학생 간 <b>차이 · 순위</b>']
 ];
+/** 출제 범위 단원 순서 (띄어쓰기 무시) — 목록에 없는 단원은 뒤에 가나다순 */
+var EX_UNIT_ORDER = ['힘과에너지', '전기와자기', '빛과물질'];
+function exUnitSort(a, b){
+  var i = EX_UNIT_ORDER.indexOf(a.replace(/\s/g, '')), j = EX_UNIT_ORDER.indexOf(b.replace(/\s/g, ''));
+  return (!a) - (!b) || (i < 0 ? 99 : i) - (j < 0 ? 99 : j) || a.localeCompare(b, 'ko');
+}
 function renderExam(){
-  if (!EXM) EXM = {purpose:'', subject:anFirstSubject(), classId:'', n:20, total:100, step:1, scope:null, openUnits:{}, plan:null, advice:null};
+  if (!EXM) EXM = {purpose:'', subject:anFirstSubject(), n:20, total:100, step:1, scope:null, openUnits:{}, plan:null, advice:null};
   if (EXM.purpose && !EXAM_PURPOSE_INFO.some(function(p){ return p[0] === EXM.purpose; })) EXM.purpose = '';
   var main = $('#main');
   if (!allSubjects().length) { main.innerHTML = '<div class="page-title"><h1>정기고사 출제 가이드</h1></div><div class="empty">아직 과목이 없어요.</div>'; return; }
   main.innerHTML = '<div class="page-title"><h1>정기고사 출제 가이드</h1><span class="grow"></span><button class="btn" id="exGoAn">형성평가 분석 보기</button></div>' +
-    '<p class="an-sub" style="margin:-6px 0 12px">형성평가에서 나온 <b>개념의 상대적 강약(순위)</b>과 <b>오개념 선택 비율</b>로, 시험 목적에 맞는 문항 구성을 추천해요.</p>' +
+    '<p class="an-sub" style="margin:-6px 0 12px">모든 반의 형성평가에서 나온 <b>개념의 상대적 강약</b>과 <b>오개념 선택 비율</b>로, 시험 목적에 맞는 문항 구성을 추천해요.</p>' +
     '<h3 class="an-step">1. 시험 목적</h3><div class="an-purpose">' + EXAM_PURPOSE_INFO.map(function(p){
-      return '<div class="an-pc' + (EXM.purpose === p[0] ? ' on' : '') + '" data-purpose="' + p[0] + '"><h4>' + p[1] + '</h4><p>' + p[2] + '</p></div>'; }).join('') + '</div>' +
+      return '<div class="an-pc' + (EXM.purpose === p[0] ? ' on' : '') + '" data-purpose="' + p[0] + '"><h4>' + p[1] + '</h4>' +
+        '<div class="ex-q">' + p[2] + '</div><dl class="ex-dl"><dt>출제</dt><dd>' + p[3] + '</dd><dt>결과</dt><dd>' + p[4] + '</dd></dl></div>'; }).join('') + '</div>' +
+    '<div class="ex-diff">💡 <b>성취기준 확인</b>은 넓게 · 기본만 물어 <b>"통과했나"</b>를, <b>결손 진단</b>은 좁게 · 깊게 물어 <b>"무엇을 보충할까"</b>를 알려 줘요.</div>' +
     '<div id="exSet"></div><div id="exOut"></div>';
   $('#exGoAn').onclick = function(){ go('analysis', {subject:EXM.subject}); };
   $$('[data-purpose]').forEach(function(c){ c.onclick = function(){
@@ -376,18 +398,18 @@ function exSettings(){
   if (!EXM.scope || EXM.scopeSubject !== EXM.subject) { EXM.scope = cons.map(function(c){ return c.id; }); EXM.scopeSubject = EXM.subject; }
   var units = [];
   cons.forEach(function(c){ if (units.indexOf(c.unit || '') < 0) units.push(c.unit || ''); });
-  units.sort(function(a, b){ return (!a) - (!b) || a.localeCompare(b, 'ko'); });
+  units.sort(exUnitSort);
   box.innerHTML = '<h3 class="an-step">2. 출제 조건</h3><div class="an-card"><div class="an-form">' +
       '<div><label>과목</label><select class="inp" id="exSubj">' + anSubjOptions(EXM.subject) + '</select></div>' +
-      '<div><label>형성평가 자료 (반)</label><select class="inp" id="exCls">' + anClassOptions(EXM.subject, EXM.classId) + '</select></div>' +
       '<div><label>문항 수</label><input type="number" class="inp" id="exN" min="1" max="100" value="' + EXM.n + '"></div>' +
       '<div><label>총점</label><input type="number" class="inp" id="exTotal" min="1" value="' + EXM.total + '"></div>' +
       '<div><label>배점 단위</label><select class="inp" id="exStep">' + [1, 0.5, 0.1].map(function(v){ return '<option value="' + v + '"' + (Number(EXM.step) === v ? ' selected' : '') + '>' + v + '점</option>'; }).join('') + '</select></div>' +
     '</div>' +
+    '<div class="an-sub" style="margin-top:6px">형성평가 자료는 이 과목의 모든 반을 함께 써요.</div>' +
     '<label class="f" style="margin-top:14px">출제 범위 <span class="an-sub" id="exScopeN"></span> <a href="#" id="exAll">전체 선택</a> · <a href="#" id="exNone">전체 해제</a></label>' +
     (cons.length ? '<div class="ex-units" id="exScope"></div>' : '<div class="an-sub">이 과목의 개념 지도가 비어 있어요. 개념 지도를 먼저 만들어 주세요.</div>') +
     '<div style="margin-top:16px"><button class="btn primary big" id="exRun">문항 구성 추천 받기</button></div></div>';
-  $('#exSubj').onchange = function(e){ exReadForm(); EXM.subject = e.target.value; EXM.classId = ''; EXM.plan = null; exSettings(); $('#exOut').innerHTML = ''; };
+  $('#exSubj').onchange = function(e){ exReadForm(); EXM.subject = e.target.value; EXM.plan = null; exSettings(); $('#exOut').innerHTML = ''; };
   $('#exAll').onclick = function(e){ e.preventDefault(); EXM.scope = cons.map(function(c){ return c.id; }); exDrawScope(cons, units); };
   $('#exNone').onclick = function(e){ e.preventDefault(); EXM.scope = []; exDrawScope(cons, units); };
   $('#exRun').onclick = exRun;
@@ -430,13 +452,13 @@ function exDrawScope(cons, units){
 }
 function exReadForm(){
   if (!$('#exN')) return;
-  EXM.classId = $('#exCls').value;
   EXM.n = Number($('#exN').value) || 20; EXM.total = Number($('#exTotal').value) || 100; EXM.step = Number($('#exStep').value) || 1;
 }
 async function exRun(){
   exReadForm();
   if (!EXM.scope.length) { toast('출제 범위 개념을 하나 이상 골라 주세요', true); return; }
-  var plan = await call('recommendExam', {subject:EXM.subject, classId:EXM.classId, purpose:EXM.purpose,
+  // 형성평가 자료는 항상 이 과목의 모든 반
+  var plan = await call('recommendExam', {subject:EXM.subject, classId:'', purpose:EXM.purpose,
     n:EXM.n, total:EXM.total, step:EXM.step, conceptIds:EXM.scope});
   if (S.view !== 'exam') return;
   EXM.plan = plan; EXM.advice = null;
@@ -444,67 +466,70 @@ async function exRun(){
   $('#exOut').scrollIntoView({behavior:'smooth', block:'start'});
 }
 var EX_TAG_CLS = {'약점':'red', '보통':'blue', '강점':'green', '자료 없음':'gray', '오개념':'org'};
+var EX_KIND_COLOR = {'약점 개념':'#c0392b', '보통 개념':'#1f8fc4', '강점 개념':'#1aa37a', '자료 없음 개념':'#9aa0ac', '오개념 확인':'#e08a2c'};
 function exKindTag(s){ return anTag(s.kind === 'concept' ? s.tag + ' 개념' : '오개념 확인', EX_TAG_CLS[s.tag] || 'blue'); }
 function exRankBar(rank, k){
   if (!rank || !k) return '<span class="an-sub">-</span>';
   var pos = k > 1 ? (rank - 1) / (k - 1) : 0.5;   // 0 = 가장 약함, 1 = 가장 강함
   return '<span class="ex-rank" title="' + k + '개 중 약한 순 ' + rank + '위"><i style="left:' + Math.round(pos * 100) + '%"></i></span><span class="an-sub"> ' + rank + '/' + k + '</span>';
 }
+/** 원그래프(도넛) 하나: rows = [{label, items, points}], key = 'items' | 'points' */
+function exDonut(rows, key, title, center){
+  var sum = rows.reduce(function(a, r){ return a + (r[key] || 0); }, 0) || 1;
+  var R = 64, r = 40, c = 72, a = -Math.PI / 2, svg = '';
+  var pt = function(rad, ang){ return (c + rad * Math.cos(ang)).toFixed(2) + ' ' + (c + rad * Math.sin(ang)).toFixed(2); };
+  rows.forEach(function(row){
+    var v = row[key] || 0, fr = v / sum;
+    if (!v) return;
+    var col = EX_KIND_COLOR[row.label] || '#888';
+    if (fr > 0.9999) { svg += '<circle cx="' + c + '" cy="' + c + '" r="' + ((R + r) / 2) + '" fill="none" stroke="' + col + '" stroke-width="' + (R - r) + '"/>'; return; }
+    var b = a + fr * Math.PI * 2, big = fr > 0.5 ? 1 : 0;
+    svg += '<path d="M' + pt(R, a) + ' A' + R + ' ' + R + ' 0 ' + big + ' 1 ' + pt(R, b) + ' L' + pt(r, b) + ' A' + r + ' ' + r + ' 0 ' + big + ' 0 ' + pt(r, a) + 'Z" fill="' + col + '" stroke="var(--paper)" stroke-width="1.5"><title>' + esc(row.label) + ' ' + anNum(v, Number.isInteger(v) ? 0 : 1) + ' (' + Math.round(fr * 100) + '%)</title></path>';
+    a = b;
+  });
+  return '<div class="ex-donut"><div class="ex-donut-t">' + esc(title) + '</div><svg viewBox="0 0 144 144">' + svg +
+      '<text x="72" y="70" text-anchor="middle" class="ex-donut-v">' + esc(center[0]) + '</text><text x="72" y="88" text-anchor="middle" class="ex-donut-u">' + esc(center[1]) + '</text></svg>' +
+    '<div class="ex-legend">' + rows.filter(function(row){ return row[key]; }).map(function(row){
+      return '<div><i style="background:' + (EX_KIND_COLOR[row.label] || '#888') + '"></i><span>' + esc(row.label) + '</span><b>' + anNum(row[key], Number.isInteger(row[key]) ? 0 : 1) + '</b><small>' + Math.round(row[key] / sum * 100) + '%</small></div>';
+    }).join('') + '</div></div>';
+}
+/** 문항 구성표 '유형'에 마우스를 올리면: 개념이면 상대 위치 · 정답률 · 자주 고른 오개념, 오개념이면 선택 비율 · 순위 */
+function exSlotTip(s){
+  var P = EXM.plan;
+  if (s.kind === 'concept') {
+    var c = P.concepts.find(function(x){ return x.id === s.conceptIds[0]; });
+    if (!c) return '';
+    return '<b>' + esc(c.name) + '</b> ' + anTag(c.tag, EX_TAG_CLS[c.tag]) +
+      '<div class="ex-tip-r"><span>상대 위치</span>' + exRankBar(c.rank, c.k) + '</div>' +
+      '<div class="ex-tip-r"><span>정답률</span><b>' + (c.n ? anPct(c.rate) : '-') + '</b>' + (c.n ? ' <small>' + c.n + '응답</small>' : '') + '</div>' +
+      '<div class="ex-tip-r"><span>오개념 선택</span><b>' + (c.misExpo ? anPct(c.misRate) : '-') + '</b></div>' +
+      (c.topMis.length ? '<div class="ex-tip-m">자주 고른 오개념<br>' + c.topMis.slice(0, 2).map(function(m){ return '· ' + esc(m.name) + (m.rate != null ? ' <small>' + anPct(m.rate) + '</small>' : ''); }).join('<br>') + '</div>' : '');
+  }
+  var m = P.miscons.find(function(x){ return x.key === s.misKey; });
+  if (!m) return '';
+  return '<b>' + esc(m.name) + '</b>' +
+    '<div class="ex-tip-r"><span>선택 비율</span><span class="ex-mis-bar"><i style="width:' + Math.round((m.rate || 0) * 100) + '%"></i></span><b>' + anPct(m.rate) + '</b></div>' +
+    '<div class="ex-tip-r"><span>고른 응답</span><b>' + m.hits + ' / ' + m.expoResp + '회</b> <small>' + m.k + '개 중 ' + m.rank + '위</small></div>' +
+    (m.concepts.length ? '<div class="ex-tip-m">관련 개념: ' + m.concepts.map(esc).join(', ') + '</div>' : '');
+}
 function exRenderOut(){
   var P = EXM.plan, out = $('#exOut');
-  var dp = P.step < 1 ? 1 : 0;
-  var tbl = function(rows, label){
-    return '<table class="an-t"><tr><th>' + label + '</th><th class="num">문항</th><th class="num">배점</th></tr>' + rows.map(function(r){
-      return '<tr><td>' + esc(r.label || r.name) + '</td><td class="num">' + anNum(r.items, Number.isInteger(r.items) ? 0 : 1) + '</td><td class="num">' + anNum(r.points, dp) + '</td></tr>'; }).join('') + '</table>';
-  };
-  // 간단히 보기: 오개념은 [자주 고른 것 · 상위 5개 · 전체], 개념은 [약점 · 보통 · 강점 · 전체] 중 골라서
-  EXM.misView = EXM.misView || 'frequent'; EXM.conView = EXM.conView || 'weak'; EXM.conMore = !!EXM.conMore;
-  var misAll = P.miscons, misFreq = misAll.filter(function(m){ return m.frequent; });
-  if (EXM.misView === 'frequent' && !misFreq.length) EXM.misView = 'top';
-  var misShown = EXM.misView === 'frequent' ? misFreq : EXM.misView === 'top' ? misAll.slice(0, 5) : misAll;
-  var conShown = EXM.conView === 'all' ? P.concepts : P.concepts.filter(function(c){ return c.tag === ({weak:'약점', mid:'보통', strong:'강점'})[EXM.conView]; });
-  var chips = function(key, cur, opts){ return '<div class="ex-chips">' + opts.map(function(o){ return '<button type="button" class="ex-chip' + (o[0] === cur ? ' on' : '') + '" data-' + key + '="' + o[0] + '">' + esc(o[1]) + '</button>'; }).join('') + '</div>'; };
-  var conRows = conShown.map(function(c){
-    return '<tr><td><b>' + esc(c.name) + '</b>' + (c.unit ? ' <span class="an-sub">' + esc(c.unit) + '</span>' : '') + '</td>' +
-      '<td>' + anTag(c.tag, EX_TAG_CLS[c.tag]) + '</td><td>' + exRankBar(c.rank, c.k) + '</td>' +
-      '<td class="num">' + (c.n ? anPct(c.rate) + ' <span class="an-sub">(' + c.n + ')</span>' : '-') + '</td>' +
-      (EXM.conMore ? '<td class="num">' + (c.misExpo ? anPct(c.misRate) : '-') + '</td>' +
-      '<td>' + (c.topMis.length ? c.topMis.map(function(m){ return esc(m.name) + (m.rate != null ? ' <span class="an-sub">' + anPct(m.rate) + '</span>' : ''); }).join('<br>') : '<span class="an-sub">-</span>') + '</td>' : '') +
-      '<td class="num"><b>' + anNum(c.items, Number.isInteger(c.items) ? 0 : 1) + '</b></td><td class="num">' + anNum(c.points, dp) + '</td></tr>';
-  }).join('');
-  // 오개념: 한 줄에 이름 · 막대 · 비율 (자세한 값은 마우스를 올리면)
-  var misRows = misShown.map(function(m){
-    var tip = '선택 ' + m.hits + ' / 노출 ' + m.expoResp + '회 · ' + m.k + '개 중 ' + m.rank + '위' + (m.concepts.length ? ' · ' + m.concepts.join(', ') : '');
-    return '<div class="ex-mis" title="' + esc(tip) + '"><span class="ex-mis-n">' + esc(m.name) + '</span>' +
-      '<span class="ex-mis-bar"><i style="width:' + Math.round((m.rate || 0) * 100) + '%"></i></span><b>' + anPct(m.rate) + '</b>' +
-      (m.assigned ? anTag('권장', 'green') : '<span class="ex-mis-gap"></span>') + '</div>';
-  }).join('');
+  var kinds = P.summary.byKind;
+  var lvCls = {'쉬움':'e', '보통':'m', '어려움':'h'};
   out.innerHTML = '<h3 class="an-step">3. 추천 설계 — ' + esc(P.purposeLabel) + ' · ' + P.n + '문항 · ' + P.total + '점</h3>' +
-    (P.stats.responses ? '' : '<div class="an-note">이 범위에 형성평가 응답이 없어 개념을 같은 비중으로 나누는 걸 권해요. 반을 확인해 주세요.</div>') +
-    '<div class="an-card ex-design"><h3>이 목적이면 이렇게 설계해 보세요</h3>' +
+    '<div class="ex-top"><div class="an-card ex-design"><h3>핵심</h3>' +
       '<ul class="an-advice">' + P.design.principles.map(function(t){ return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>' +
-      (P.design.facts.length ? '<div class="ex-facts"><b>이번 형성평가 자료로 본 제안</b><ul class="an-advice">' + P.design.facts.map(function(t){ return '<li>' + esc(t) + '</li>'; }).join('') + '</ul></div>' : '') + '</div>' +
-    '<div class="ex-pair">' +
-      '<div class="an-card ex-pair-l"><h3>구성 요약 (권장)</h3>' + tbl(P.summary.byKind, '유형') + '</div>' +
-      '<div class="an-card ex-pair-r"><div class="ex-head"><h3>오개념 선택 비율</h3>' +
-        chips('mv', EXM.misView, [['frequent', '자주 고른 것 ' + misFreq.length], ['top', '상위 5개'], ['all', '전체 ' + misAll.length]]) + '</div>' +
-        (misRows ? '<div class="ex-mis-list">' + misRows + '</div><div class="an-sub ex-foot">선택 비율 = 그 오개념 선지를 고른 응답 ÷ 그 선지가 있던 문항의 응답 · 줄에 마우스를 올리면 자세히</div>'
-          : '<div class="empty">' + (misAll.length ? '고른 보기에 해당하는 오개념이 없어요.' : '오개념이 연결된 선지의 응답이 아직 없어요.') + '</div>') + '</div>' +
-    '</div>' +
-    '<div class="an-card"><div class="ex-head"><h3>개념별 상대 위치와 배분</h3>' +
-      chips('cv', EXM.conView, [['weak', '약점 ' + P.concepts.filter(function(c){ return c.tag === '약점'; }).length], ['mid', '보통'], ['strong', '강점'], ['all', '전체 ' + P.concepts.length]]) +
-      '<button type="button" class="ex-chip" id="exConMore">' + (EXM.conMore ? '간단히' : '자세히') + '</button></div>' +
-      '<p class="d">형성평가 정답률 순으로 줄 세워 아래 1/3은 <b>약점</b>, 위 1/3은 <b>강점</b>이에요 (상대 순위). 점이 왼쪽일수록 상대적으로 약해요.</p>' +
-      (conRows ? '<div class="an-scroll"><table class="an-t ex-con"><tr><th>개념</th><th></th><th>상대 위치</th><th class="num">정답률</th>' + (EXM.conMore ? '<th class="num">오개념 선택</th><th>자주 고른 오개념</th>' : '') + '<th class="num">권장 문항</th><th class="num">배점</th></tr>' + conRows + '</table></div>'
-        : '<div class="empty">이 보기에 해당하는 개념이 없어요.</div>') + '</div>' +
-    '<div class="an-card"><div class="row" style="gap:8px"><h3 style="margin:0;flex:1">출제 포인트 (AI)</h3><button class="btn" id="exAdvice" style="flex:none">' + (EXM.advice ? '다시 받기' : 'AI 출제 포인트 받기') + '</button></div>' +
-      '<div id="exAdviceBox" style="margin-top:8px">' + exAdviceHtml() + '</div></div>' +
-    '<div class="an-card"><div class="row" style="gap:8px;margin-bottom:8px"><h3 style="margin:0;flex:1">문항 구성표</h3><span class="an-sub" style="flex:none">배점 합계 <b id="exSum"></b></span>' +
+      (P.design.facts.length ? '<div class="ex-warn">' + P.design.facts.map(esc).join('<br>') + '</div>' : '') +
+      '<div class="an-sub" style="margin-top:8px">개념별 강약 · 오개념 통계는 [형성평가 분석]에서 자세히 볼 수 있어요. 아래 표의 <b>유형</b>에 마우스를 올리면 근거가 간단히 보여요.</div></div>' +
+    '<div class="an-card ex-mix"><h3>권장 구성</h3><div class="ex-donuts">' +
+      exDonut(kinds, 'items', '문항', [String(P.n), '문항']) + exDonut(kinds, 'points', '배점', [String(P.total), '점']) + '</div></div></div>' +
+    '<div class="an-card"><div class="row" style="gap:8px;margin-bottom:8px"><h3 style="margin:0;flex:1">문항 구성표 <small class="an-sub" style="font-weight:400">쉬운 문항부터</small></h3><span class="an-sub" style="flex:none">배점 합계 <b id="exSum"></b></span>' +
       '<button class="btn" id="exCopy" style="flex:none">표 복사</button></div>' +
       '<div class="an-scroll"><table class="an-t" style="min-width:960px"><tr><th class="num">번호</th><th>유형</th><th>출제 내용</th><th>권장 난이도</th><th>근거</th><th class="num">배점</th><th>추천 문항 (문제은행)</th></tr>' +
       P.slots.map(function(s, i){
-        return '<tr><td class="num">' + s.no + '</td><td>' + exKindTag(s) + '</td><td><b>' + esc(s.label) + '</b>' + (s.kind !== 'concept' && s.conceptNames.length ? '<div class="an-sub">' + s.conceptNames.map(esc).join(', ') + '</div>' : '') + '</td>' +
-          '<td style="max-width:220px">' + (s.level ? '<span class="ex-lv ex-lv-' + ({'쉬움':'e', '보통':'m', '어려움':'h'})[s.level] + '">' + esc(s.level) + '</span><div class="an-sub" style="margin-top:3px">' + esc(s.levelWhy || '') + '</div>' : '-') + '</td>' +
+        var first = !i || P.slots[i - 1].level !== s.level;
+        return '<tr' + (first && i ? ' class="ex-lvstart"' : '') + '><td class="num">' + s.no + '</td><td class="ex-kind" data-slot="' + i + '">' + exKindTag(s) + '</td><td><b>' + esc(s.label) + '</b>' + (s.kind !== 'concept' && s.conceptNames.length ? '<div class="an-sub">' + s.conceptNames.map(esc).join(', ') + '</div>' : '') + '</td>' +
+          '<td style="max-width:220px">' + (s.level ? '<span class="ex-lv ex-lv-' + lvCls[s.level] + '">' + esc(s.level) + '</span><div class="an-sub" style="margin-top:3px">' + esc(s.levelWhy || '') + '</div>' : '-') + '</td>' +
           '<td class="an-sub" style="max-width:260px">' + esc(s.evidence) + '</td>' +
           '<td class="num"><input class="inp an-pts" type="number" step="' + P.step + '" min="0" data-pts="' + i + '" value="' + s.points + '"></td>' +
           '<td><select class="inp" data-pick="' + i + '" style="min-width:180px"><option value="">직접 출제</option>' + s.candidates.map(function(c){
@@ -512,12 +537,13 @@ function exRenderOut(){
             (s.pick ? '<div class="an-sub" data-why="' + i + '">' + esc((s.candidates.find(function(c){ return c.id === s.pick; }) || {}).why || '') + '</div>' : '') + '</td></tr>';
       }).join('') + '</table></div>' +
       '<details style="margin-top:12px"><summary class="an-sub" style="cursor:pointer">추천 방식</summary><div class="an-sub" style="line-height:1.7;margin-top:6px">' +
-        '· 개념의 강약: 출제 범위 개념을 정답률(평활값 (정답+1)/(응답+2)) 순으로 줄 세운 <b>상대 순위</b>예요. 아래 1/3 약점 · 위 1/3 강점 · 나머지 보통, 응답이 없는 개념은 자료 없음.<br>' +
-        '· 오개념: 선택 횟수 대신 <b>선택 비율</b>(고른 응답 ÷ 노출된 응답)로 비교해요. 비율 순위 위쪽 1/3이면서 2회 이상 고른 오개념을 "자주 고름"으로 보고 먼저 확인하길 권해요.<br>' +
-        '· 권장 난이도: 개념의 상대 위치와 시험 목적에 따라 쉬움 · 보통 · 어려움 중 하나를 권해요. 실제 난이도는 선생님이 문항을 보고 정해 주세요.<br>' +
-        '· 시험 목적마다 개념 가중치(약점 · 보통 · 강점), 오개념 문항 비율, 배점 가중치, 전 개념 포함 여부가 달라요. 문항 수와 배점은 최대 잔여법으로 정수(배점 단위) 배분해요.<br>' +
-        '· 추천 문항: 개념(또는 오개념)이 맞는 문항 중, 약점 · 보통 개념이면 자주 고른 오개념을 오답 선지로 담은 문항을 우선하고, 형성평가에서 역변별이 나온 문항은 뒤로 미뤄요.<br>' +
-        '· 학생 개인의 능력 추정, 문항의 절대 난이도, 예상 점수 분포는 쓰지 않아요.</div></details></div>';
+        '· 개념의 강약: 정답률(평활값) 순 상대 순위 — 아래 1/3 약점 · 위 1/3 강점 · 나머지 보통.<br>' +
+        '· 오개념: 선택 비율(고른 응답 ÷ 노출된 응답)로 비교해요.<br>' +
+        '· 순서: 쉬움 → 보통 → 어려움, 같은 난이도에서는 근거(약점 · 보통 · 강점 개념 → 오개념)가 같은 문항끼리.<br>' +
+        '· 배점: 권장 난이도가 높을수록 높게, 같은 난이도에서는 시험 목적에 따라 개념별로 조금씩 달라요. 더 어려운 문항이 더 낮은 배점을 받지 않아요.<br>' +
+        '· 추천 문항: 개념(또는 오개념)이 맞는 문항 중 자주 고른 오개념을 오답 선지로 담은 문항을 먼저, 역변별 문항은 뒤로.</div></details></div>' +
+    '<div class="an-card"><div class="row" style="gap:8px"><h3 style="margin:0;flex:1">출제 포인트 (AI)</h3><button class="btn" id="exAdvice" style="flex:none">' + (EXM.advice ? '다시 받기' : 'AI 출제 포인트 받기') + '</button></div>' +
+      '<div id="exAdviceBox" style="margin-top:8px">' + exAdviceHtml() + '</div></div>';
   var sum = function(){ var t = P.slots.reduce(function(a, s){ return a + Number(s.points || 0); }, 0); $('#exSum').textContent = (Math.round(t * 100) / 100) + ' / ' + P.total + '점'; $('#exSum').style.color = Math.abs(t - P.total) > 1e-6 ? 'var(--danger)' : ''; };
   sum();
   $$('[data-pts]').forEach(function(x){ x.oninput = function(){ P.slots[Number(x.dataset.pts)].points = Number(x.value) || 0; sum(); }; });
@@ -528,10 +554,24 @@ function exRenderOut(){
     var c = s.candidates.find(function(y){ return y.id === s.pick; });
     if (w) w.textContent = c ? c.why : '';
   }; });
+  // 유형 칸 호버창
+  var tip = null;
+  var hideTip = function(){ if (tip) tip.remove(); tip = null; };
+  $$('[data-slot]', out).forEach(function(td){
+    td.onmouseenter = function(){
+      hideTip();
+      var html = exSlotTip(P.slots[Number(td.dataset.slot)]);
+      if (!html) return;
+      tip = document.createElement('div'); tip.className = 'ex-tip'; tip.innerHTML = html;
+      document.body.appendChild(tip);
+      var r = td.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
+      tip.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, r.left)) + 'px';
+      tip.style.top = (r.bottom + 6 + h > window.innerHeight - 8 ? Math.max(8, r.top - h - 6) : r.bottom + 6) + 'px';
+    };
+    td.onmouseleave = hideTip;
+  });
+  document.addEventListener('scroll', hideTip, {capture:true, once:true});
   $('#exAdvice').onclick = exAdvice;
-  $$('[data-mv]', out).forEach(function(b){ b.onclick = function(){ EXM.misView = b.dataset.mv; exRenderOut(); }; });
-  $$('[data-cv]', out).forEach(function(b){ b.onclick = function(){ EXM.conView = b.dataset.cv; exRenderOut(); }; });
-  $('#exConMore').onclick = function(){ EXM.conMore = !EXM.conMore; exRenderOut(); };
   $('#exCopy').onclick = function(){
     var title = function(id){ var q = S.questions.find(function(x){ return x.id === id; }); return q ? q.title : ''; };
     var lines = [['번호', '유형', '출제 내용', '관련 개념', '권장 난이도', '배점', '추천 문항', '근거'].join('\t')].concat(P.slots.map(function(s){
