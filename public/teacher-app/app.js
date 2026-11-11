@@ -383,9 +383,9 @@ function minimizeEditor(){
 /* =====================================================================
  *  0. 대문 (로고를 누르면 여기로)
  * ===================================================================== */
-/** 대문 [튜토리얼 영상 보기] 영상 — public/tutorial.mp4 에 파일을 넣거나, 유튜브 주소(youtu.be/… · watch?v=…)로 바꾸면 돼요.
- *  파일이 아직 없으면 '준비 중' 안내가 나와요. */
-const TUTORIAL_VIDEO = '/tutorial.mp4';
+/** 대문 [튜토리얼 영상 보기] 영상 — public/video/ 아래 파일 경로, 또는 유튜브 주소(youtu.be/… · watch?v=…)로 바꿔도 돼요.
+ *  파일을 못 불러오면 '준비 중' 안내가 나와요. */
+const TUTORIAL_VIDEO = '/video/manatee-tutorial.mp4';
 function openTutorial(){
   const yt = TUTORIAL_VIDEO.match(/(?:youtu\.be\/|[?&]v=|\/embed\/|\/shorts\/)([\w-]{11})/);
   const player = yt
