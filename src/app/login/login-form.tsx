@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
@@ -99,6 +100,11 @@ export default function LoginForm() {
       </button>
       <div className={s.err} role="alert">{err}</div>
       {info && <div className={s.info}>{info}</div>}
+      {mode === 'signup' && (
+        <p className={s.agree}>
+          계정을 만들면 <Link href="/terms" target="_blank">이용약관</Link>과 <Link href="/privacy" target="_blank">개인정보처리방침</Link>에 동의하는 것으로 봐요.
+        </p>
+      )}
       <button
         type="button"
         className={s.switch}

@@ -1,0 +1,105 @@
+.bg {
+  min-height: 100vh;
+  background: #f3ebdd;
+  color: #3a342e;
+}
+.head {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 20px 16px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.tabs {
+  display: flex;
+  gap: 6px;
+}
+.tabs a {
+  padding: 7px 14px;
+  border-radius: 999px;
+  color: #5f574f;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+}
+.tabs a:hover {
+  background: rgba(60, 40, 20, 0.06);
+}
+.tabs a.on {
+  background: #3a342e;
+  color: #fff;
+}
+.doc {
+  max-width: 820px;
+  margin: 8px auto 0;
+  padding: 32px clamp(18px, 5vw, 48px) 40px;
+  background: #fcf8f1;
+  border-radius: 24px;
+  box-shadow: 0 2px 4px rgba(60, 40, 20, 0.05), 0 18px 48px rgba(60, 40, 20, 0.08);
+  line-height: 1.75;
+  font-size: 15px;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.doc h1 {
+  margin: 0 0 4px;
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+.meta {
+  margin: 0 0 24px;
+  color: #8a8178;
+  font-size: 13px;
+}
+.doc h2 {
+  margin: 30px 0 8px;
+  font-size: 17px;
+  font-weight: 800;
+}
+.doc p {
+  margin: 6px 0;
+}
+.doc ul,
+.doc ol {
+  margin: 6px 0;
+  padding-left: 22px;
+}
+.doc li {
+  margin: 3px 0;
+}
+.doc a {
+  color: #1b2a87;
+}
+.tableWrap {
+  overflow-x: auto;
+  margin: 10px 0;
+}
+.doc table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+.doc th,
+.doc td {
+  border: 1px solid #e4d9c8;
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+.doc th {
+  background: #f3ebdd;
+  font-weight: 700;
+}
+.note {
+  margin: 14px 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f3ebdd;
+  font-size: 14px;
+}

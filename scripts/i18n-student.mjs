@@ -11,6 +11,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 const SOURCES = [
   'src/app/student/student-app.tsx',
   'src/app/student/i18n.tsx',
+  'src/components/site-footer.tsx',
   'src/server/student.ts',
   'src/app/api/student/route.ts',
   'src/lib/rpc.ts',

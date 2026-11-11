@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import LoginForm from './login-form';
 import { ManateeLogo } from '@/components/manatee';
+import SiteFooter from '@/components/site-footer';
 import s from './login.module.css';
 
 export const metadata: Metadata = { title: '교사 로그인' };
@@ -17,6 +18,7 @@ export default function LoginPage() {
           <LoginForm />
         </Suspense>
       </div>
+      <SiteFooter className={s.foot} />
     </div>
   );
 }

@@ -1,0 +1,24 @@
+.foot {
+  padding: 22px 16px 26px;
+  text-align: center;
+  color: #8a8178;
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+.foot p {
+  margin: 0;
+}
+.links {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+.links a {
+  color: #5f574f;
+  text-decoration: none;
+}
+.links a:hover {
+  text-decoration: underline;
+}

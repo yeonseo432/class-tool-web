@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import QuestionImage from '@/components/question-image';
 import { ManateeMark } from '@/components/manatee';
+import SiteFooter from '@/components/site-footer';
 import { CIRC, DONT_KNOW, DONT_KNOW_LABEL } from '@/lib/live';
 import { RpcError, studentApi } from '@/lib/rpc';
 import { useLiveChannel } from '@/lib/use-live-channel';
@@ -151,6 +152,7 @@ function LoginView({ notice, onLogin }: { notice: string; onLogin: (p: Profile) 
           <div className={s.err} role="alert">{err}</div>
         </form>
       </div>
+      <SiteFooter t={t} />
     </div>
   );
 }

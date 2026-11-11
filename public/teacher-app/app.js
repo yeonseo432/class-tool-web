@@ -417,7 +417,9 @@ async function renderHome(){
         <div><b>${act.length}</b><span>운영 중 클래스</span></div>
         <div><b>${conceptNodes().length}</b><span>개념</span></div>
         <div><b>${S.miscons.length}</b><span>오개념</span></div></div></div>
-    </div></div>`;
+    </div>
+    <footer class="home-foot"><nav><a href="/terms" target="_blank">이용약관</a><span>·</span><a href="/privacy" target="_blank"><b>개인정보처리방침</b></a></nav>
+      <p>manatee · 서울대학교 물리교육과 박근형 · 양지운 · 차혁찬 · 최연서</p><p>SNU TEIC AIED Challenge 출품작 · © 2026</p></footer></div>`;
   $$('[data-hc]', main).forEach(b => b.onclick = () => cards[b.dataset.hc][4]());
   $('#homeTut', main).onclick = openTutorial;
   let list = [];
