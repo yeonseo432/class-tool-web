@@ -5,7 +5,7 @@ import { NextResponse, type NextRequest } from 'next/server';
  * 로그인 화면으로 보내지 않는 경로.
  * /api 는 각 Route Handler가 직접 로그인을 확인하고 JSON(401)으로 답해요.
  */
-const PUBLIC_PREFIXES = ['/login', '/auth', '/student', '/api'];
+const PUBLIC_PREFIXES = ['/login', '/auth', '/student', '/api', '/terms', '/privacy'];
 
 const isPublic = (path: string) =>
   path === '/' || PUBLIC_PREFIXES.some((p) => path === p || path.startsWith(p + '/'));

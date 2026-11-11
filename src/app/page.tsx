@@ -1,11 +1,12 @@
 import Link from 'next/link';
 import { ManateeLogo } from '@/components/manatee';
+import SiteFooter from '@/components/site-footer';
 
 /** 첫 화면: 교사 · 학생 들어가기 */
 export default function Home() {
   return (
-    <main style={{ minHeight: '100vh', background: '#f3ebdd', display: 'grid', placeItems: 'center', padding: 16 }}>
-      <div style={{ width: 'min(440px, 100%)', textAlign: 'center' }}>
+    <main style={{ minHeight: '100vh', background: '#f3ebdd', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '16px 16px 0' }}>
+      <div style={{ width: 'min(440px, 100%)', textAlign: 'center', margin: 'auto 0' }}>
         <ManateeLogo size={64} />
         <p style={{ color: '#7a7066', margin: '18px 0 36px', fontSize: 17 }}>수업 중에 문제를 함께 풀고, 바로 확인해요.</p>
         <div style={{ display: 'grid', gap: 14 }}>
@@ -13,6 +14,7 @@ export default function Home() {
           <Link href="/student" style={btn(false)}>학생 수업 참여</Link>
         </div>
       </div>
+      <SiteFooter />
     </main>
   );
 }
