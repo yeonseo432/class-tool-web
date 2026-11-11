@@ -89,8 +89,8 @@ async function imageModels(base: string, key: string): Promise<string[]> {
   }
 }
 
-/** model 을 주면 교사 설정 대신 그 모델로 (예: 개념 잇기처럼 판단이 중요한 일) */
-export async function openaiJson<T = Record<string, unknown>>(ctx: Ctx, messages: ChatMessage[], timeoutMs = 90_000, model?: string): Promise<T> {
+/** model 을 주면 교사 설정 대신 그 모델로 (예: 개념 잇기처럼 판단이 중요한 일). 교사가 아닌 곳(학생 번역)은 ctx=null + model */
+export async function openaiJson<T = Record<string, unknown>>(ctx: Ctx | null, messages: ChatMessage[], timeoutMs = 90_000, model?: string): Promise<T> {
   const key = apiKey();
   if (!key) throw new ApiError('OpenAI API 키가 없어요. Vercel 프로젝트 환경변수 OPENAI_API_KEY 를 설정해 주세요.');
   const base = (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, '');
@@ -99,7 +99,7 @@ export async function openaiJson<T = Record<string, unknown>>(ctx: Ctx, messages
     res = await fetch(base + '/chat/completions', {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key },
-      body: JSON.stringify({ model: model || await modelOf(ctx), messages, response_format: { type: 'json_object' } }),
+      body: JSON.stringify({ model: model || (ctx ? await modelOf(ctx) : 'gpt-6-luna'), messages, response_format: { type: 'json_object' } }),
       signal: AbortSignal.timeout(timeoutMs),
     });
   } catch (e) {
