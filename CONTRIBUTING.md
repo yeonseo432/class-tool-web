@@ -98,8 +98,10 @@ GitHub Desktop 위쪽 **Current branch**가 `main`인지 확인 → **Fetch orig
    - `supabase/migrations/` 에 `날짜시간_설명.sql` 파일을 새로 추가해요 (예전 파일은 고치지 않기).
    - `src/lib/database.types.ts` 도 맞춰 주세요.
    - PR 설명에 "마이그레이션 있음"이라고 적기.
-   - **운영 DB 적용은 배포 담당이 배포 직전에 해요.** 각자 운영 DB에 직접 적용하지 마세요.
-     (코드보다 DB가 늦으면 사이트가 오류 나고, DB만 먼저 바뀌면 지금 사이트가 깨질 수 있어요.)
+   - **운영 DB 적용은 관리자가 PR을 `main`에 합치기 직전에 해요.** 각자 운영 DB에 직접 적용하지 마세요.
+     (`main`에 합쳐지면 바로 자동 배포돼요. 코드보다 DB가 늦으면 사이트가 오류 나고,
+     DB만 먼저 바뀌면 지금 사이트가 깨질 수 있어요. 그래서 DB를 바꾸는 변경은 예전 코드에서도 문제없게
+     — 칸 추가 · 기본값 있음 — 만들어 주세요.)
 2. **공개 저장소예요.** 학생 실명 · 학교 실제 명단 · 이메일 · 비밀번호 · API 키를 코드나 파일에 넣지 마세요.
    (`data/` 폴더와 `.env*` 파일은 자동으로 제외돼요.)
 3. **`main`에 바로 올리지 말고** 내 브랜치 → Pull Request 로 올려 주세요.
@@ -115,7 +117,7 @@ GitHub Desktop 위쪽 **Current branch**가 `main`인지 확인 → **Fetch orig
 ## 3. 관리자용: 드라이브 ↔ GitHub 맞추기
 
 관리자 컴퓨터의 드라이브 폴더가 git 작업 폴더예요 (git 기록은 드라이브 밖 `~/git-repos/class-tool-web.git`).
-배포 전마다 아래 순서로 맞춰요. (Claude Code에 "드라이브 변경 GitHub에 올리고 main 받아 와"라고 해도 돼요.)
+드라이브 작업을 배포하고 싶을 때 아래 순서로 맞춰요 (Push 하면 자동 배포). (Claude Code에 "드라이브 변경 GitHub에 올리고 main 받아 와"라고 해도 돼요.)
 
 ```bash
 git status                        # 드라이브에서 팀원이 바꾼 파일 확인
@@ -129,8 +131,20 @@ git push origin main
 
 ## 4. 배포
 
-- 운영 사이트: https://class-tool-web.vercel.app
-- 배포는 관리자가 `main`에 합친 뒤 해요. 급하면 PR에 "배포 필요"라고 적어 주세요.
+**자동 배포예요.** (Vercel ↔ GitHub 연결)
+
+| 언제 | 무엇이 | 주소 |
+|---|---|---|
+| `main` 에 Push · PR 합치기 | **운영 사이트** 배포 | https://class-tool-web.vercel.app |
+| 다른 브랜치에 Push · PR 만들기 | **미리보기** 배포 (운영 DB 그대로 씀) | PR 화면의 Vercel 댓글 · 체크에 주소가 떠요 |
+
+- 1~2분 뒤 PR 화면이나 GitHub 저장소의 커밋 옆 ✅ / ❌ 로 배포 결과를 볼 수 있어요. ❌ 이면 눌러서 오류를 확인해요.
+- 미리보기도 **운영 DB**에 연결돼요. 미리보기에서 실제 선생님 데이터를 지우는 테스트는 하지 마세요.
+- **길 A (드라이브)** 작업은 관리자가 커밋해서 `main`에 Push 할 때 배포돼요. 드라이브에 저장만 해서는 배포되지 않아요.
+- 마이그레이션이 든 PR 합치는 순서 (관리자):
+  1. 운영 DB에 적용: `set -a; source .env.local; set +a; npx supabase db push --remote="$POSTGRES_URL_NON_POOLING" --yes`
+  2. 그다음 PR 합치기 (= 자동 배포)
+- 예전처럼 관리자 컴퓨터에서 `vercel deploy --prod` 로 직접 배포할 수도 있어요 (커밋하지 않은 드라이브 내용이 그대로 올라가니 되도록 Push 로 배포해요).
 
 ---
 
