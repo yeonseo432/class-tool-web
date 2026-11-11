@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#1b2a87;--blue:#1a73e8;--line:#e3e6ef;--sub:#6b7280}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:#eef1f8;font-family:'Noto Sans KR',system-ui,sans-serif;color:#1d2433}
+button{font-family:inherit;cursor:pointer}
+.top{background:var(--navy);color:#fff;padding:14px 18px;display:flex;align-items:center;gap:10px;font-weight:700}
+.top .me{margin-left:auto;font-weight:400;font-size:13px;opacity:.85}
+.wrap{max-width:760px;margin:0 auto;padding:18px}
+.card{background:#fff;border-radius:16px;padding:22px;box-shadow:0 2px 8px rgba(20,30,80,.07)}
+.join h1{margin:0 0 6px;font-size:24px}
+.join p{color:var(--sub);margin:0 0 18px}
+.inp{width:100%;border:1.5px solid #d6dbe7;border-radius:12px;padding:14px;font-size:20px;margin-bottom:12px;font-family:inherit}
+.inp.code{text-align:center;letter-spacing:10px;font-weight:900;font-size:30px}
+.btn{width:100%;border:0;border-radius:12px;padding:16px;font-size:18px;font-weight:700;background:var(--navy);color:#fff}
+.btn:disabled{opacity:.5}
+.err{color:#e5484d;min-height:22px;margin-top:8px;text-align:center}
+.wait{text-align:center;padding:60px 20px;color:#555}
+.wait .dot{width:56px;height:56px;border-radius:50%;border:5px solid #dfe5f5;border-top-color:var(--blue);margin:0 auto 18px;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.qno{color:var(--sub);font-size:14px;margin-bottom:8px}
+.stem{font-size:21px;line-height:1.65;font-weight:500;white-space:pre-wrap}
+.qimg{max-width:100%;max-height:340px;border-radius:10px;margin:12px 0;border:1px solid var(--line)}
+.choices{margin-top:16px;display:flex;flex-direction:column;gap:10px}
+.ch{display:flex;gap:12px;align-items:flex-start;border:2px solid var(--line);border-radius:14px;padding:15px 16px;font-size:19px;background:#fff;text-align:left;line-height:1.5}
+.ch .n{font-weight:900;color:var(--navy)}
+.ch:disabled{color:inherit;cursor:default}
+.ch.sel{border-color:var(--blue);background:#eaf2ff}
+.ch.ans{border-color:#16a34a;background:#e9f8ef}
+.ch.wrong{border-color:#e5484d;background:#ffefef}
+.submit{margin-top:18px}
+.done{text-align:center;padding:26px 10px 6px}
+.done b{font-size:22px}
+.result{border-radius:14px;padding:16px;margin-top:16px;font-size:17px;text-align:center;font-weight:700}
+.result.o{background:#e9f8ef;color:#126b35}
+.result.x{background:#ffefef;color:#b42323}
+.exp{background:#f6f7fb;border-radius:12px;padding:12px 14px;margin-top:12px;white-space:pre-wrap;line-height:1.6;color:#374151}
+</style>
+</head>
+<body>
+<div class="top"><span id="ttl">수업 참여</span><span class="me" id="me"></span></div>
+<div class="wrap" id="app"></div>
+<script>
+const PRE_CODE = <?!= JSON.stringify(code) ?>;
+const CIRC = ['①','②','③','④','⑤','⑥','⑦','⑧'];
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const store = { get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }, set(k, v){ try { localStorage.setItem(k, v); } catch(e){} } };
+let CODE = '', NAME = '', timer = null, last = '', picked = null, sending = false;
+
+function rpc(fn, ...args){
+  return new Promise((res, rej) => google.script.run.withSuccessHandler(r => res(r ? JSON.parse(r) : r)).withFailureHandler(rej)[fn](...args));
+}
+function msg(e){ return ((e && e.message) || String(e)).replace(/^(Error|Exception):\s*/, ''); }
+
+function joinView(err){
+  clearInterval(timer);
+  $('#app').innerHTML = `<div class="card join"><h1>수업 참여하기</h1><p>선생님 화면의 4자리 코드와 이름을 입력하세요.</p>
+    <input class="inp code" id="code" inputmode="numeric" maxlength="4" placeholder="0000" value="${esc(PRE_CODE || store.get('st_code') || '')}">
+    <input class="inp" id="name" placeholder="번호와 이름 (예: 12 홍길동)" value="${esc(store.get('st_name') || '')}">
+    <button class="btn" id="joinBtn">참여하기</button><div class="err" id="err">${esc(err || '')}</div></div>`;
+  $('#joinBtn').onclick = join;
+  $('#name').addEventListener('keydown', e => { if (e.key === 'Enter') join(); });
+}
+async function join(){
+  const code = $('#code').value.trim(), name = $('#name').value.trim();
+  if (code.length !== 4) return $('#err').textContent = '4자리 코드를 입력해 주세요.';
+  if (!name) return $('#err').textContent = '이름을 입력해 주세요.';
+  $('#joinBtn').disabled = true;
+  try {
+    const r = await rpc('studentJoin', code, name);
+    CODE = code; NAME = name; store.set('st_code', code); store.set('st_name', name);
+    $('#ttl').textContent = r.title; $('#me').textContent = name;
+    $('#app').innerHTML = '<div class="card wait"><div class="dot"></div>연결 중…</div>';
+    poll(); timer = setInterval(poll, 2500);
+  } catch(e) { $('#err').textContent = msg(e); $('#joinBtn').disabled = false; }
+}
+async function poll(){
+  if (sending) return;
+  let s;
+  try { s = await rpc('studentState', CODE, NAME); } catch(e) { return; }
+  if (s.phase === 'ended') { clearInterval(timer); $('#app').innerHTML = '<div class="card wait">수업이 종료되었어요.<br>수고했어요!</div>'; return; }
+  const key = JSON.stringify([s.phase, s.idx, s.question && s.question.id, s.mine]);
+  if (key === last) return;
+  if (!s.question || last.indexOf('"' + s.question.id + '"') < 0) picked = null;
+  last = key;
+  render(s);
+}
+function render(s){
+  const q = s.question;
+  if (!q || s.phase === 'waiting') {
+    $('#app').innerHTML = `<div class="card wait"><div class="dot"></div><b>선생님이 문제를 보낼 때까지 기다려 주세요</b>${s.total ? `<div style="margin-top:8px;color:#999">${s.idx + 1}번 문제 준비 중</div>` : ''}</div>`;
+    return;
+  }
+  const reveal = s.phase === 'reveal';
+  const mine = s.mine;
+  const canAnswer = s.phase === 'open' && !mine;
+  let h = `<div class="card"><div class="qno">${s.idx + 1} / ${s.total}번 문제</div><div class="stem">${esc(q.stem)}</div>
+    ${q.imageUrl ? `<img class="qimg" src="${esc(q.imageUrl)}" onerror="if(!this.dataset.r){this.dataset.r=1;this.src=this.src.replace('drive.google.com/thumbnail?id=','lh3.googleusercontent.com/d/').replace(/&sz=.*/,'');}">` : ''}`;
+  if (q.type === 'mc') {
+    const chosen = mine ? mine.a : picked;
+    h += `<div class="choices">${q.choices.map((c, i) => {
+      const v = String(i + 1);
+      let cls = chosen === v ? 'sel' : '';
+      if (reveal && String(q.answer) === v) cls = 'ans';
+      else if (reveal && chosen === v) cls = 'wrong';
+      return `<button class="ch ${cls}" data-v="${v}" ${canAnswer ? '' : 'disabled'}><span class="n">${CIRC[i]}</span><span>${esc(c)}</span></button>`;
+    }).join('')}</div>`;
+  } else {
+    h += `<input class="inp" id="sa" style="margin-top:16px" placeholder="답을 입력하세요" value="${esc(mine ? mine.a : (picked || ''))}" ${canAnswer ? '' : 'disabled'}>`;
+    if (reveal) h += `<div class="exp"><b>정답:</b> ${esc(String(q.answer).split('|')[0])}</div>`;
+  }
+  if (canAnswer) h += `<button class="btn submit" id="sub">제출하기</button><div class="err" id="err"></div>`;
+  else if (mine && !reveal) h += `<div class="done"><b>제출 완료!</b><div style="color:#888;margin-top:6px">다른 친구들이 풀 때까지 기다려 주세요</div></div>`;
+  else if (!mine && !reveal) h += `<div class="done" style="color:#888">제출이 마감되었어요</div>`;
+  if (reveal) {
+    if (mine) h += `<div class="result ${mine.c ? 'o' : 'x'}">${mine.c ? '정답이에요! 잘했어요' : '아쉬워요, 오답이에요'}</div>`;
+    if (q.explanation) h += `<div class="exp"><b>해설</b>\n${esc(q.explanation)}</div>`;
+  }
+  h += '</div>';
+  $('#app').innerHTML = h;
+  document.querySelectorAll('.ch[data-v]').forEach(b => b.onclick = () => {
+    picked = b.dataset.v;
+    document.querySelectorAll('.ch').forEach(x => x.classList.toggle('sel', x === b));
+  });
+  if ($('#sa')) $('#sa').oninput = e => picked = e.target.value;
+  if ($('#sub')) $('#sub').onclick = async () => {
+    const ans = q.type === 'mc' ? picked : ($('#sa').value || '').trim();
+    if (!ans) return $('#err').textContent = q.type === 'mc' ? '답을 골라 주세요.' : '답을 입력해 주세요.';
+    sending = true; $('#sub').disabled = true;
+    try { await rpc('studentSubmit', CODE, NAME, q.id, ans); last = ''; }
+    catch(e) { $('#err').textContent = msg(e); $('#sub').disabled = false; }
+    sending = false;
+    poll();
+  };
+}
+joinView();
+</script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+# vercel deploy 때 업로드하지 않을 파일
+# (환경변수는 Vercel 프로젝트 설정에 이미 있으므로 .env 파일은 올리지 않음)
+.env*
+!.env.example
+
+# 학생 이름이 들어 있는 원본 시트 데이터
+data/
+
+# 참고용 원본 Apps Script 코드 · 로컬 빌드 산출물
+legacy/
+.next/
+node_modules/
+supabase/.temp/
+supabase/.branches/
+
+# 구글 드라이브 동기화 충돌 사본 등
+*.gdoc
+*.gsheet
+.DS_Store

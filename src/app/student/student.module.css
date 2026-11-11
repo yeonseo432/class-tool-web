@@ -1,0 +1,497 @@
+/* legacy/gas/Student.html 스타일 */
+.page {
+  min-height: 100vh;
+  background: var(--bg);
+}
+.top {
+  background: var(--navy);
+  color: #fff;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+}
+.me {
+  margin-left: auto;
+  font-weight: 400;
+  font-size: 13px;
+  opacity: 0.85;
+}
+.wrap {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 18px;
+}
+.card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 22px;
+  box-shadow: 0 2px 8px rgba(20, 30, 80, 0.07);
+}
+.join h1 {
+  margin: 0 0 6px;
+  font-size: 24px;
+}
+.join p {
+  color: var(--sub);
+  margin: 0 0 18px;
+}
+.inp {
+  width: 100%;
+  border: 1.5px solid #d6dbe7;
+  border-radius: 12px;
+  padding: 14px;
+  font-size: 20px;
+  margin-bottom: 12px;
+}
+.inp:focus {
+  outline: none;
+  border-color: var(--blue);
+}
+.code {
+  text-align: center;
+  letter-spacing: 10px;
+  font-weight: 900;
+  font-size: 30px;
+}
+.btn {
+  width: 100%;
+  border: 0;
+  border-radius: 12px;
+  padding: 16px;
+  font-size: 18px;
+  font-weight: 700;
+  background: var(--navy);
+  color: #fff;
+  cursor: pointer;
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.err {
+  color: #e5484d;
+  min-height: 22px;
+  margin-top: 8px;
+  text-align: center;
+}
+.wait {
+  text-align: center;
+  padding: 60px 20px;
+  color: #555;
+}
+.waitSub {
+  margin-top: 8px;
+  color: #999;
+}
+.dot {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 5px solid #dfe5f5;
+  border-top-color: var(--blue);
+  margin: 0 auto 18px;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.qno {
+  color: var(--sub);
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+.stem {
+  font-size: 21px;
+  line-height: 1.65;
+  font-weight: 500;
+  white-space: pre-wrap;
+}
+.qimg {
+  max-width: 100%;
+  max-height: 340px;
+  border-radius: 10px;
+  margin: 12px 0;
+  border: 1px solid var(--line);
+}
+.choices {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ch {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  border: 2px solid var(--line);
+  border-radius: 14px;
+  padding: 15px 16px;
+  font-size: 19px;
+  background: #fff;
+  text-align: left;
+  line-height: 1.5;
+  color: inherit;
+  cursor: pointer;
+}
+.ch:disabled {
+  cursor: default;
+}
+.n {
+  font-weight: 900;
+  color: var(--navy);
+}
+/* 그림 선지: 개수만큼 한 줄 (열 수는 화면에서 style 로) */
+.picChoices {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+.picChoices .ch {
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 6px;
+  min-width: 0;
+}
+.picChoices .n {
+  align-self: flex-start;
+}
+.chImg {
+  border-radius: 8px;
+  width: 100%;
+  max-width: 220px;
+  aspect-ratio: 1;
+  object-fit: contain;
+  pointer-events: none;
+}
+.sel {
+  border-color: var(--blue);
+  background: #eaf2ff;
+}
+.ans {
+  border-color: #16a34a;
+  background: #e9f8ef;
+}
+.wrong {
+  border-color: #e5484d;
+  background: #ffefef;
+}
+.submit {
+  margin-top: 18px;
+}
+.done {
+  text-align: center;
+  padding: 26px 10px 6px;
+}
+.done b {
+  font-size: 22px;
+}
+.doneSub {
+  color: #888;
+  margin-top: 6px;
+}
+.result {
+  border-radius: 14px;
+  padding: 16px;
+  margin-top: 16px;
+  font-size: 17px;
+  text-align: center;
+  font-weight: 700;
+}
+.o {
+  background: #e9f8ef;
+  color: #126b35;
+}
+.x {
+  background: #ffefef;
+  color: #b42323;
+}
+/* 제출 완료 · 미제출 (정답 공개 전 · 중립) */
+.sent {
+  background: #eef2ff;
+  color: #3446b5;
+}
+.exp {
+  background: #f6f7fb;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-top: 12px;
+  white-space: pre-wrap;
+  line-height: 1.6;
+  color: #374151;
+}
+
+/* ---------- 학생 로그인 · 빈 화면 · 설정 ---------- */
+.blank {
+  background: #fff;
+  padding-bottom: 80px;
+}
+.codeInp {
+  text-align: center;
+  letter-spacing: 0.4em;
+  font-weight: 700;
+}
+.codeInp::placeholder {
+  letter-spacing: normal;
+  font-weight: 400;
+}
+.need {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 17px;
+  color: #374151;
+}
+.need b {
+  color: var(--blue);
+}
+.needCount {
+  margin-left: auto;
+  background: #eaf2ff;
+  color: var(--blue);
+  border-radius: 999px;
+  padding: 2px 12px;
+  font-weight: 700;
+}
+.resultCard {
+  text-align: center;
+  margin-top: 8vh;
+}
+.cmp {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 18px 0 10px;
+}
+.cmp div {
+  background: #f6f7fb;
+  border-radius: 14px;
+  padding: 16px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cmp span {
+  color: var(--sub);
+  font-size: 14px;
+}
+.cmp b {
+  font-size: 28px;
+  word-break: break-all;
+}
+.right {
+  color: #16a34a;
+}
+.gear {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: #6b7280;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(20, 30, 80, 0.08);
+  z-index: 20;
+}
+.gearDot {
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #f59e0b;
+}
+.gearDot.off {
+  background: #e5484d;
+}
+.panel {
+  position: fixed;
+  left: 16px;
+  bottom: 74px;
+  width: min(320px, calc(100vw - 32px));
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 8px 30px rgba(20, 30, 80, 0.15);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.who {
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+.offTxt {
+  color: #e5484d;
+  font-size: 13px;
+}
+.warn {
+  background: #fff7e6;
+  color: #92400e;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.inpSm {
+  width: 100%;
+  border: 1.5px solid #d6dbe7;
+  border-radius: 10px;
+  padding: 10px;
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+.btnSm {
+  width: 100%;
+  border: 0;
+  border-radius: 10px;
+  padding: 11px;
+  font-size: 15px;
+  font-weight: 700;
+  background: var(--navy);
+  color: #fff;
+  cursor: pointer;
+}
+.ghost {
+  background: #f1f3f9;
+  color: #374151;
+}
+.okTxt {
+  color: #16a34a;
+  font-size: 14px;
+}
+.hint {
+  color: var(--sub);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.linkBtn {
+  display: block;
+  margin: 6px auto 0;
+  border: 0;
+  background: none;
+  color: var(--sub);
+  font-size: 15px;
+  cursor: pointer;
+}
+
+/* ---------- 빈 화면: 둥근 카드 가운데 안내 ---------- */
+.idleWrap {
+  min-height: calc(100vh - 80px);
+  display: grid;
+  place-items: center;
+  padding: 24px 18px;
+}
+.idle {
+  width: min(560px, 100%);
+  background: #f8f6f1;
+  border-radius: 28px;
+  padding: 48px 30px 44px;
+  text-align: center;
+  box-shadow: inset 0 0 0 1px #ece6dc;
+}
+.idle h2 {
+  margin: 18px 0 10px;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.45;
+  word-break: keep-all;
+  color: #161616;
+}
+.idle p {
+  margin: 0;
+  color: #7a7066;
+  font-size: 16px;
+  line-height: 1.6;
+  word-break: keep-all;
+}
+
+/* 휴대폰처럼 좁은 화면: 설정(톱니) 버튼이 보기 · 제출 버튼을 가리지 않게 오른쪽 위 빈자리로 */
+@media (max-width: 600px) {
+  .gear {
+    left: auto;
+    bottom: auto;
+    right: 12px;
+    top: 12px;
+    width: 42px;
+    height: 42px;
+  }
+  .panel {
+    left: auto;
+    bottom: auto;
+    right: 12px;
+    top: 62px;
+  }
+  .wrap {
+    padding-top: 62px;
+  }
+}
+
+/* '모르겠어요' 선지 (모든 객관식에 자동으로) */
+.dunno {
+  width: 100%;
+  margin-top: 10px;
+  border-style: dashed;
+  color: #7a7066;
+  align-items: center;
+}
+/* 제출 후 · 정답 공개: 문제 원문 다시 보기 (누를 수 없음) */
+.review {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  text-align: left;
+}
+.ro {
+  cursor: default;
+  position: relative;
+}
+.mineTag {
+  margin-left: auto;
+  flex: none;
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  background: #3a342e;
+  border-radius: 10px;
+  padding: 1px 8px;
+  align-self: center;
+}
+.picChoices .mineTag {
+  margin: 4px 0 0;
+}
+
+/* 휴대폰: 글자 · 여백을 줄여 보기와 버튼이 넘치지 않게 */
+@media (max-width: 600px) {
+  .stem {
+    font-size: 17px;
+  }
+  .ch {
+    font-size: 16px;
+    padding: 11px 12px;
+    gap: 8px;
+  }
+  .picChoices {
+    gap: 6px;
+  }
+  .picChoices .ch {
+    padding: 6px 4px;
+    font-size: 13px;
+  }
+  .card {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+}

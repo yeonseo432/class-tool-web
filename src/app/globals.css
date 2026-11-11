@@ -1,0 +1,35 @@
+/* 기존 Apps Script 화면(legacy/gas/*.html)의 색·글꼴을 그대로 사용 */
+:root {
+  --navy: #1b2a87;
+  --blue: #1a73e8;
+  --line: #e3e6ef;
+  --sub: #6b7280;
+  --bg: #eef1f8;
+  --text: #1d2433;
+  --font-sans: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+a {
+  color: inherit;
+}

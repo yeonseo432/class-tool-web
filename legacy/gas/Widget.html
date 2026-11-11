@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#1b2a87;--blue:#1a73e8;--line:#e3e6ef;--sub:#6b7280;--ok:#16a34a;--bad:#e5484d}
+*{box-sizing:border-box}
+html,body{margin:0;background:#eef1f8;font-family:'Noto Sans KR',system-ui,sans-serif;color:#1d2433;font-size:14px}
+button{font-family:inherit;cursor:pointer}
+.top{background:var(--navy);color:#fff;padding:12px 14px;display:flex;align-items:center;gap:10px}
+.top .t{flex:1;font-weight:700;font-size:14px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.live{font-size:11px;background:#e5484d;border-radius:10px;padding:2px 8px;font-weight:700;animation:blink 1.6s infinite}
+@keyframes blink{50%{opacity:.55}}
+.wrap{padding:12px}
+.card{background:#fff;border-radius:12px;padding:12px 14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(20,30,80,.07)}
+.code-box{display:flex;align-items:center;gap:12px}
+.code{font-size:38px;font-weight:900;letter-spacing:6px;color:var(--navy);line-height:1}
+.code-l{font-size:11px;color:var(--sub)}
+.qr{margin-left:auto;width:84px;height:84px;border-radius:6px;cursor:pointer;border:1px solid var(--line)}
+.url{font-size:11px;color:var(--sub);word-break:break-all;margin-top:6px}
+.nav{display:flex;align-items:center;gap:8px}
+.nav button{width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:18px}
+.nav .no{flex:1;text-align:center;font-weight:900;font-size:18px}
+.qt{font-weight:700;margin:8px 0 2px}
+.stem{font-size:13px;color:#4b5563;white-space:pre-wrap;max-height:68px;overflow:hidden}
+.phase{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:10px}
+.phase button{border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px 4px;font-weight:700;font-size:13px;color:#555}
+.phase button.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.phase button.send.on{background:#16a34a;border-color:#16a34a}
+.phase button.reveal.on{background:#e8702a;border-color:#e8702a}
+.ph-label{font-size:12px;color:var(--sub);margin-top:8px;text-align:center}
+.nums{display:flex;gap:8px}
+.num{flex:1;text-align:center;background:#f5f7fb;border-radius:10px;padding:8px 4px}
+.num b{display:block;font-size:24px;font-weight:900}
+.num span{font-size:11px;color:var(--sub)}
+.bars{margin-top:10px}
+.bar-row{display:flex;align-items:center;gap:8px;margin:6px 0}
+.bar-row .lb{width:22px;font-weight:700;text-align:center}
+.bar-row .tr{flex:1;height:22px;background:#f0f2f7;border-radius:6px;overflow:hidden;position:relative}
+.bar-row .tr b{display:block;height:100%;background:#8fa8ff;border-radius:6px;transition:width .5s}
+.bar-row.ans .tr b{background:#16a34a}
+.bar-row .ct{width:52px;text-align:right;font-size:12px;color:#555}
+.short{display:flex;justify-content:space-between;padding:5px 8px;border-radius:6px;background:#f5f7fb;margin:4px 0;font-size:13px}
+.short.ok{background:#e9f8ef;color:#126b35}
+.names{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;max-height:90px;overflow:auto}
+.names span{font-size:11px;background:#eef2ff;color:#3446b5;border-radius:10px;padding:2px 8px}
+.names span.x{background:#ffecec;color:#b42323}
+.names span.o{background:#e9f8ef;color:#126b35}
+.foot{display:flex;gap:6px}
+.foot button{flex:1;border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px;font-weight:700}
+.foot .end{color:#fff;background:#e5484d;border-color:#e5484d}
+.tip{font-size:11px;color:var(--sub);text-align:center;margin-top:8px;line-height:1.5}
+.err{background:#fff;border-radius:12px;padding:30px 18px;text-align:center;color:#b42323;margin:20px}
+#big{position:fixed;inset:0;background:#fff;z-index:50;padding:36px 44px;overflow:auto;display:none}
+#big.on{display:block}
+#big .bq{font-size:28px;line-height:1.6;font-weight:500;white-space:pre-wrap}
+#big .bc{font-size:24px;margin:10px 0;padding:6px 12px;border-radius:8px}
+#big .bc.ans{background:#e9f8ef;color:#126b35;font-weight:700}
+#big img{max-width:100%;max-height:45vh;margin:12px 0;border-radius:8px}
+#big .close{position:fixed;right:18px;top:14px;border:0;background:#eef1f8;border-radius:10px;padding:8px 14px;font-weight:700}
+#big .bcode{position:fixed;right:18px;bottom:14px;font-size:20px;color:#888}
+</style>
+</head>
+<body>
+<div class="top"><span class="live">LIVE</span><span class="t" id="title">수업 준비 중…</span></div>
+<div class="wrap" id="app"></div>
+<div id="big"></div>
+<script>
+const TOKEN = <?!= JSON.stringify(token) ?>;
+const LESSON = <?!= JSON.stringify(lessonId) ?>;
+const APP_URL = <?!= JSON.stringify(appUrl) ?>;
+const CIRC = ['①','②','③','④','⑤','⑥','⑦','⑧'];
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let ST = null, timer = null, busy = false, showQr = true;
+
+function api(fn, ...args){
+  return new Promise((res, rej) => google.script.run.withSuccessHandler(r => res(r ? JSON.parse(r) : r)).withFailureHandler(rej).api(TOKEN, fn, args));
+}
+function studentLink(){ return APP_URL + '?page=student&code=' + (ST ? ST.code : ''); }
+async function start(){
+  try {
+    ST = await api('startLive', LESSON);
+    render();
+    timer = setInterval(poll, 2000);
+  } catch(e) {
+    $('#app').innerHTML = `<div class="err">${esc((e && e.message) || e)}<br><br>교사 화면에서 다시 [수업시작]을 눌러 주세요.</div>`;
+  }
+}
+async function poll(){
+  if (busy || !ST || ST.phase === 'ended') return;
+  try { const s = await api('liveStats', ST.code); if (!busy) { ST = s; render(); } } catch(e){}
+}
+async function ctl(action, idx){
+  busy = true;
+  try { ST = await api('liveControl', ST.code, action, idx); }
+  catch(e){ alertBox((e && e.message) || e); }
+  busy = false;
+  if (ST.phase === 'ended') { clearInterval(timer); $('#app').innerHTML = '<div class="card" style="text-align:center;padding:30px">수업을 종료했어요.<br>학생 응답은 스프레드시트 [Responses] 시트와 통계 메뉴에서 볼 수 있어요.<br><br><button onclick="window.close()" style="padding:8px 16px;border-radius:8px;border:1px solid #ddd;background:#fff">창 닫기</button></div>'; $('#title').textContent = '수업 종료'; return; }
+  render();
+}
+function alertBox(m){ const d = document.createElement('div'); d.className = 'err'; d.textContent = m; $('#app').prepend(d); setTimeout(() => d.remove(), 3000); }
+const PH = {waiting:'학생 화면: 대기 중 (문제를 아직 보내지 않았어요)', open:'학생들이 답을 제출하는 중이에요', closed:'제출을 마감했어요', reveal:'학생 화면에 정답과 해설이 공개됐어요'};
+function render(){
+  const s = ST;
+  $('#title').textContent = s.title;
+  const q = s.q;
+  let h = `<div class="card"><div class="code-box"><div><div class="code-l">학생 접속 코드</div><div class="code">${s.code}</div>
+      <div class="code-l" style="margin-top:6px">접속 ${s.joined}명</div></div>
+      ${showQr && APP_URL ? `<img class="qr" id="qr" title="크게 보기" src="https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(studentLink())}">` : ''}</div>
+      <div class="url">${esc(APP_URL ? APP_URL + '?page=student' : '')}</div></div>`;
+  if (!s.total) {
+    h += `<div class="card" style="text-align:center;color:#6b7280;padding:24px">이 차시에 추가된 문제가 없어요.<br>교사 화면의 차시 문제 구성에서 문제를 추가한 뒤 위젯을 다시 열어 주세요.</div>`;
+  } else {
+    h += `<div class="card"><div class="nav"><button id="prev" ${s.idx <= 0 ? 'disabled' : ''}>‹</button><div class="no">${s.idx + 1} / ${s.total}</div><button id="next" ${s.idx >= s.total - 1 ? 'disabled' : ''}>›</button></div>
+      <div class="qt">${esc(q.title)}</div><div class="stem">${esc(q.stem)}</div>
+      <div class="phase"><button class="send ${s.phase === 'open' ? 'on' : ''}" data-a="open">문제 보내기</button>
+        <button class="${s.phase === 'closed' ? 'on' : ''}" data-a="close">제출 마감</button>
+        <button class="reveal ${s.phase === 'reveal' ? 'on' : ''}" data-a="reveal">정답 공개</button></div>
+      <div class="ph-label">${PH[s.phase] || ''}</div></div>`;
+    const rate = s.n ? Math.round(s.correctN / s.n * 100) : 0;
+    h += `<div class="card"><div class="nums"><div class="num"><b>${s.n}</b><span>제출 / ${s.joined}명</span></div>
+      <div class="num"><b style="color:${s.n ? (rate >= 70 ? '#16a34a' : rate >= 40 ? '#e8702a' : '#e5484d') : '#999'}">${s.n ? rate + '%' : '-'}</b><span>정답률</span></div>
+      <div class="num"><b>${s.n - s.correctN}</b><span>오답</span></div></div>
+      <div class="bars">`;
+    if (q.type === 'mc') {
+      const max = Math.max(1, ...s.counts);
+      s.counts.forEach((c, i) => {
+        const ans = String(q.answer) === String(i + 1);
+        h += `<div class="bar-row ${ans ? 'ans' : ''}"><span class="lb">${CIRC[i]}</span><div class="tr"><b style="width:${c / max * 100}%"></b></div>
+          <span class="ct">${c}명 ${s.n ? '(' + Math.round(c / s.n * 100) + '%)' : ''}</span></div>`;
+      });
+    } else {
+      h += s.shorts.length ? s.shorts.slice(0, 8).map(x => `<div class="short ${x.c ? 'ok' : ''}"><span>${esc(x.text)}</span><b>${x.count}명</b></div>`).join('') : '<div style="color:#999;font-size:12px;text-align:center">아직 제출한 답이 없어요</div>';
+    }
+    h += `</div><div class="names">${s.submitted.map(x => `<span class="${s.phase === 'reveal' ? (x.c ? 'o' : 'x') : ''}">${esc(x.name)}</span>`).join('')}</div>
+      <div class="tip">초록 막대 = 정답 · 2초마다 자동 갱신</div></div>`;
+  }
+  h += `<div class="foot"><button id="bigBtn">문제 크게 보기</button><button class="end" id="endBtn">수업 종료</button></div>
+    <div class="tip">이 창을 PPT 슬라이드쇼 옆(또는 다른 모니터)에 두고 사용하세요.</div>`;
+  $('#app').innerHTML = h;
+  document.querySelectorAll('[data-a]').forEach(b => b.onclick = () => ctl(b.dataset.a));
+  if ($('#prev')) $('#prev').onclick = () => ctl('goto', s.idx - 1);
+  if ($('#next')) $('#next').onclick = () => ctl('goto', s.idx + 1);
+  $('#endBtn').onclick = () => { if (confirm('수업을 종료할까요? 학생 화면도 종료돼요.')) ctl('end'); };
+  $('#bigBtn').onclick = showBig;
+  if ($('#qr')) $('#qr').onclick = showBigQr;
+}
+function showBig(){
+  const s = ST, q = s.q;
+  if (!q) return;
+  const b = $('#big');
+  b.innerHTML = `<button class="close" onclick="document.getElementById('big').classList.remove('on')">닫기</button>
+    <div style="color:#888;margin-bottom:10px">${s.idx + 1} / ${s.total}</div><div class="bq">${esc(q.stem)}</div>
+    ${q.imageUrl ? `<img src="${esc(q.imageUrl)}">` : ''}
+    ${(q.choices || []).map((c, i) => `<div class="bc ${s.phase === 'reveal' && String(q.answer) === String(i + 1) ? 'ans' : ''}">${CIRC[i]} ${esc(c)}</div>`).join('')}
+    ${s.phase === 'reveal' && q.type === 'short' ? `<div class="bc ans">정답: ${esc(String(q.answer).split('|')[0])}</div>` : ''}
+    <div class="bcode">접속 코드 <b>${s.code}</b></div>`;
+  b.classList.add('on');
+}
+function showBigQr(){
+  const b = $('#big');
+  b.innerHTML = `<button class="close" onclick="document.getElementById('big').classList.remove('on')">닫기</button>
+    <div style="text-align:center;margin-top:20px"><div style="font-size:22px;color:#555">태블릿으로 QR을 찍거나 코드를 입력하세요</div>
+    <img src="https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(studentLink())}" style="width:min(60vh,80vw)">
+    <div style="font-size:64px;font-weight:900;letter-spacing:12px;color:#1b2a87">${ST.code}</div></div>`;
+  b.classList.add('on');
+}
+start();
+</script>
+</body>
+</html>

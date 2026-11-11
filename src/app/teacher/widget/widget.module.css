@@ -1,0 +1,505 @@
+/* legacy/gas/Widget.html 스타일 */
+.page {
+  /* manatee 테마 (교사 화면과 같은 색) */
+  --bg: #faf8f4;
+  --navy: #161616;
+  --line: #ece6dc;
+  --sub: #7a7066;
+  min-height: 100vh;
+  background: var(--bg);
+  color: #161616;
+  font-size: 15px;
+}
+.page button {
+  cursor: pointer;
+  color: inherit;
+}
+.top {
+  background: linear-gradient(160deg, #3a3a3a 0%, #1b1b1b 46%, #060606 100%);
+  color: #fff;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.t {
+  flex: 1;
+  font-weight: 700;
+  font-size: 14px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.live {
+  font-size: 11px;
+  background: #e5484d;
+  border-radius: 10px;
+  padding: 2px 8px;
+  font-weight: 700;
+  animation: blink 1.6s infinite;
+}
+@keyframes blink {
+  50% {
+    opacity: 0.55;
+  }
+}
+.wrap {
+  padding: 12px;
+  max-width: 520px;
+  margin: 0 auto;
+}
+.card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 3px rgba(20, 30, 80, 0.07);
+}
+.codeBox {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.code {
+  font-size: 38px;
+  font-weight: 900;
+  letter-spacing: 6px;
+  color: var(--navy);
+  line-height: 1;
+}
+.codeL {
+  font-size: 11px;
+  color: var(--sub);
+}
+.qr {
+  margin-left: auto;
+  width: 84px;
+  height: 84px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid var(--line);
+}
+.url {
+  font-size: 11px;
+  color: var(--sub);
+  word-break: break-all;
+  margin-top: 6px;
+}
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.nav button {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #ffffff;
+  font-size: 18px;
+}
+.nav button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.no {
+  flex: 1;
+  text-align: center;
+  font-weight: 900;
+  font-size: 18px;
+}
+.qt {
+  font-weight: 700;
+  margin: 8px 0 2px;
+}
+.stem {
+  font-size: 13px;
+  color: #3a342e;
+  white-space: pre-wrap;
+  max-height: 68px;
+  overflow: hidden;
+}
+.phase {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  margin-top: 10px;
+}
+.phase button {
+  border: 1px solid var(--line);
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 10px 4px;
+  font-weight: 700;
+  font-size: 13px;
+  color: #555;
+}
+.phase button.on {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: #fff;
+}
+.phase button.send.on {
+  background: #16a34a;
+  border-color: #16a34a;
+}
+.phase button.reveal.on {
+  background: #e8702a;
+  border-color: #e8702a;
+}
+.send,
+.reveal,
+.on {
+  /* 위 조합 선택자용 */
+}
+.phLabel {
+  font-size: 12px;
+  color: var(--sub);
+  margin-top: 8px;
+  text-align: center;
+}
+.nums {
+  display: flex;
+  gap: 8px;
+}
+.num {
+  flex: 1;
+  text-align: center;
+  background: #f8f6f1;
+  border-radius: 10px;
+  padding: 8px 4px;
+}
+.num b {
+  display: block;
+  font-size: 24px;
+  font-weight: 900;
+}
+.num span {
+  font-size: 11px;
+  color: var(--sub);
+}
+.bars {
+  margin-top: 10px;
+}
+.barRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0;
+}
+.lb {
+  width: 22px;
+  font-weight: 700;
+  text-align: center;
+}
+.tr {
+  flex: 1;
+  height: 22px;
+  background: #f4f0e9;
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+}
+.tr b {
+  display: block;
+  height: 100%;
+  background: #f2937b;
+  border-radius: 6px;
+  transition: width 0.5s;
+}
+.ansRow .tr b {
+  background: #16a34a;
+}
+.ct {
+  width: 64px;
+  text-align: right;
+  font-size: 12px;
+  color: #555;
+}
+.short {
+  display: flex;
+  justify-content: space-between;
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: #f8f6f1;
+  margin: 4px 0;
+  font-size: 13px;
+}
+.ok {
+  background: #e9f8ef;
+  color: #126b35;
+}
+.none {
+  color: #999;
+  font-size: 12px;
+  text-align: center;
+}
+.names {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+  max-height: 90px;
+  overflow: auto;
+}
+.names span {
+  font-size: 11px;
+  background: #efeae1;
+  color: #c2543a;
+  border-radius: 10px;
+  padding: 2px 8px;
+}
+.names span.x {
+  background: #ffecec;
+  color: #b42323;
+}
+.names span.o {
+  background: #e9f8ef;
+  color: #126b35;
+}
+.o,
+.x {
+  /* .names span 조합 선택자용 */
+}
+.foot {
+  display: flex;
+  gap: 6px;
+}
+.foot button {
+  flex: 1;
+  border: 1px solid var(--line);
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 10px;
+  font-weight: 700;
+}
+.foot button.end {
+  color: #fff;
+  background: #e5484d;
+  border-color: #e5484d;
+}
+.end {
+  /* .foot 조합 선택자용 */
+}
+.plain {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  background: #ffffff;
+}
+.tip {
+  font-size: 11px;
+  color: var(--sub);
+  text-align: center;
+  margin-top: 8px;
+  line-height: 1.5;
+}
+.err {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 18px;
+  text-align: center;
+  color: #b42323;
+  margin: 0 0 10px;
+}
+.big {
+  position: fixed;
+  inset: 0;
+  background: #ffffff;
+  z-index: 50;
+  padding: 36px 44px;
+  overflow: auto;
+}
+.bq {
+  font-size: 28px;
+  line-height: 1.6;
+  font-weight: 500;
+  white-space: pre-wrap;
+}
+.bc {
+  font-size: 24px;
+  margin: 10px 0;
+  padding: 6px 12px;
+  border-radius: 8px;
+}
+.bcPics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.bcPics .bc {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  border: 1px solid #ece6dc;
+}
+.big img.bcImg {
+  width: min(22vh, 200px);
+  height: min(22vh, 200px);
+  max-height: none;
+  margin: 0;
+  object-fit: contain;
+}
+.bcAns {
+  background: #e9f8ef;
+  color: #126b35;
+  font-weight: 700;
+}
+.big img {
+  max-width: 100%;
+  max-height: 45vh;
+  margin: 12px 0;
+  border-radius: 8px;
+}
+.close {
+  position: fixed;
+  right: 18px;
+  top: 14px;
+  border: 0;
+  background: #f4f0e9;
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-weight: 700;
+}
+.bcode {
+  position: fixed;
+  right: 18px;
+  bottom: 14px;
+  font-size: 20px;
+  color: #888;
+}
+.bigCode {
+  font-size: 64px;
+  font-weight: 900;
+  letter-spacing: 12px;
+  color: var(--navy);
+}
+
+/* 문제 크게 보기 (새 창): 창 크기에 맞춰 한 화면에 (글자 크기는 화면에서 em 배율로 줄임) */
+.bigWin {
+  height: 100vh;
+  overflow: hidden;
+  box-sizing: border-box;
+  padding: 2.2em 3em;
+  background: #ffffff;
+  color: #161616;
+  font-size: 1em;
+}
+.bigWin .bq {
+  font-size: 2em;
+}
+.bigNo {
+  color: #888;
+  margin-bottom: 0.6em;
+  font-size: 1.1em;
+}
+.bigWin .bc {
+  font-size: 1.6em;
+  margin: 0.35em 0;
+}
+.bigWin img.bigImg {
+  display: block;
+  max-width: 100%;
+  max-height: 16em;
+  margin: 0.6em 0;
+  border-radius: 8px;
+}
+/* 그림 선지 · 짧은 글 선지: 개수만큼 한 줄 */
+.bcRow,
+.bcRowText {
+  display: grid;
+  gap: 0.6em;
+  margin-top: 0.6em;
+}
+.bcRow .bc {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2em;
+  margin: 0;
+  border: 1px solid #ece6dc;
+  min-width: 0;
+}
+.bcRowText .bc {
+  margin: 0;
+}
+.bigWin img.bcImgRow {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  max-height: 9em;
+  object-fit: contain;
+  margin: 0;
+}
+
+/* 단계 버튼 2개 (문제 출제 · 정답 공개) */
+.phase.phase2 {
+  grid-template-columns: 1fr 1fr;
+}
+/* 선지별 막대: 누르면 그 선지를 고른 학생 · 아래에 그 선지의 오개념 */
+.barBox {
+  border-radius: 8px;
+  padding: 2px 4px;
+  margin: 2px -4px;
+}
+.barBox.picked {
+  background: #f8f6f1;
+}
+.picked {
+  /* .barBox 조합 선택자용 */
+}
+button.barRow {
+  width: 100%;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+}
+.mis {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0 0 4px 30px;
+}
+.mis span {
+  font-size: 11px;
+  color: #b04a00;
+  background: #fff1e6;
+  border-radius: 10px;
+  padding: 1px 8px;
+  line-height: 1.5;
+}
+.dunnoRow .tr b {
+  background: #c9c1b4;
+}
+.dunnoRow .ct {
+  width: auto;
+  white-space: nowrap;
+}
+.dunnoRow {
+  /* 모르겠어요 막대 */
+}
+.barBox .names {
+  margin: 4px 0 6px 30px;
+}
+/* 좁은 창 · 휴대폰 */
+@media (max-width: 420px) {
+  .wrap {
+    padding: 8px;
+  }
+  .num b {
+    font-size: 20px;
+  }
+  .phase button {
+    font-size: 12px;
+    padding: 9px 2px;
+  }
+  .foot button {
+    padding: 9px 6px;
+    font-size: 13px;
+  }
+  .bigWin {
+    padding: 1.2em 1em;
+  }
+}
