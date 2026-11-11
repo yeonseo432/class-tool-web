@@ -15,6 +15,7 @@
     "smoke:live": "node --env-file=.env.local --env-file-if-exists=.env.development.local scripts/smoke-live.mjs",
     "parity:analysis": "node --env-file=.env.local --env-file-if-exists=.env.development.local scripts/parity-analysis.mjs",
     "smoke:ai-mock": "node --env-file=.env.local --env-file-if-exists=.env.development.local scripts/smoke-ai-mock.mjs",
+    "i18n:student": "node --env-file-if-exists=.env.local scripts/i18n-student.mjs",
     "sample:export": "node --env-file=.env.local scripts/sample-export.mjs",
     "sample:build": "node scripts/sample-build.mjs",
     "sample:update": "npm run sample:export && npm run sample:build",

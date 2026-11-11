@@ -7,6 +7,8 @@ import { isCorrect } from './api/live';
 import { cleanStudentNo, STUDENT_NO } from './api/roster';
 import * as M from './mappers';
 import { notifyLive } from './realtime';
+import { translateTexts } from './translate';
+import { langOf } from '@/lib/langs';
 import {
   checkInitial, checkPassword, hashPassword, newSessionId, PW_MAX, PW_MIN, type StudentSession,
 } from './student-auth';
@@ -243,6 +245,36 @@ export async function studentReview(io: CookieIO): Promise<ReviewItem[]> {
     });
   }
   return [...out.values()];
+}
+
+/** 단답형 정답 글 중 화면에 보여 주는 것 (여러 개 인정이면 첫 번째) */
+const firstAnswer = (a: string) => String(a).split('|').map((x) => x.trim()).filter(Boolean)[0] ?? '';
+/** 틀린 문제 다시 보기에서 한 번에 번역하는 문제 수 (최근 것부터) */
+const REVIEW_TRANSLATE_MAX = 60;
+
+/**
+ * 문제 번역 → { 원문: 번역 }. 학생이 지금 볼 수 있는 글만 번역해요 (정답 글은 정답 공개 뒤에만).
+ *   target 'current': 지금 화면의 문제 (발문 · 선지 · 공개 뒤 단답형 정답)
+ *   target 'review' : 틀린 문제 다시 보기 목록
+ * 정답 판정은 원문 기준 그대로 — 학생 화면이 원문 자리에 번역을 보여 주기만 해요.
+ */
+export async function studentTranslate(io: CookieIO, langIn: unknown, targetIn: unknown): Promise<Record<string, string>> {
+  const lang = str(langIn);
+  if (!langOf(lang)) throw new ApiError('지원하지 않는 언어예요.');
+  if (str(targetIn) === 'review') {
+    const items = (await studentReview(io)).slice(0, REVIEW_TRANSLATE_MAX);
+    return translateTexts(lang, items.flatMap((it) => [it.stem, ...it.choices, ...(it.type === 'short' ? [firstAnswer(it.correctAnswer)] : [])]));
+  }
+  const sb = createAdminClient();
+  const rows = await me(sb, io);
+  if (!rows.length) throw new ApiError('다시 로그인해 주세요.', 401);
+  const a = await activeFor(sb, rows);
+  const q = a && snapshot(a.s)[a.s.idx];
+  const phase = a?.s.phase as Phase | undefined;
+  if (!q || !phase || phase === 'waiting' || phase === 'ended') return {};
+  const texts = [q.stem, ...(q.type === 'mc' ? q.choices : [])];
+  if (phase === 'reveal' && q.type === 'short') texts.push(firstAnswer(q.answer));
+  return translateTexts(lang, texts);
 }
 
 /** 학생에게 보내는 문제 (정답 · 오개념 · 해설은 빼고) */

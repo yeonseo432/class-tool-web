@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { ApiError } from '@/server/core';
 import {
-  studentLogin, studentLogout, studentMe, studentPassword, studentReview, studentState, studentSubmit, type CookieIO,
+  studentLogin, studentLogout, studentMe, studentPassword, studentReview, studentState, studentSubmit, studentTranslate, type CookieIO,
 } from '@/server/student';
 import { COOKIE, COOKIE_MAX_AGE, readSession, signSession } from '@/server/student-auth';
 
@@ -9,6 +9,7 @@ import { COOKIE, COOKIE_MAX_AGE, readSession, signSession } from '@/server/stude
  * 학생용 창구 — POST /api/student { fn, args }
  *   studentLogin(code, studentNo, password, newPassword?) · studentMe() · studentLogout() · studentPassword(cur, next)
  *   studentState() · studentSubmit(qid, answer) · studentReview() (끝난 수업에서 틀린 문제)
+ *   studentTranslate(lang, 'current' | 'review') (문제 번역 → { 원문: 번역 }, 화면 표시용)
  * 로그인 상태는 서명한 httpOnly 쿠키 (교사의 학생 명단에 있는 학생만)
  */
 const FNS: Record<string, (io: CookieIO, ...a: unknown[]) => Promise<unknown>> = {
@@ -19,6 +20,7 @@ const FNS: Record<string, (io: CookieIO, ...a: unknown[]) => Promise<unknown>> =
   studentState: (io) => studentState(io),
   studentSubmit: (io, q, a) => studentSubmit(io, q, a),
   studentReview: (io) => studentReview(io),
+  studentTranslate: (io, lang, target) => studentTranslate(io, lang, target),
 };
 
 export async function POST(request: NextRequest) {

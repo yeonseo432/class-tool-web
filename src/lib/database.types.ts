@@ -279,6 +279,20 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"translations": {
+                  Row: {
+                    "created_at": string,"lang": string,"out": string,"src": string,"src_hash": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"lang": string,"out": string,"src": string,"src_hash": string
+                  }
+                  Update: {
+                    "created_at"?: string,"lang"?: string,"out"?: string,"src"?: string,"src_hash"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 }
           }
           Views: {

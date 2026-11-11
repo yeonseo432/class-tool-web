@@ -579,3 +579,71 @@
     padding-right: 14px;
   }
 }
+
+/* ---------- 언어 (로그인 화면 · 설정) ---------- */
+.dirBox {
+  display: contents;
+}
+.lang {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  margin: -6px 0 12px;
+  margin-inline-start: auto;
+  padding: 6px 10px;
+  border: 1.5px solid #d6dbe7;
+  border-radius: 999px;
+  color: var(--sub);
+  background: #fff;
+  cursor: pointer;
+}
+.lang select {
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 15px;
+  color: #1f2937;
+  max-width: 220px;
+  cursor: pointer;
+}
+.lang select:focus {
+  outline: none;
+}
+.lang:focus-within {
+  border-color: var(--navy);
+}
+.langSm {
+  margin: 8px 0 10px;
+}
+/* 문제 번역 표시 + 원문 보기 */
+.trBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: #eef2ff;
+  border-radius: 10px;
+  color: #3730a3;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.trBtn {
+  flex: none;
+  border: 1px solid #c7d2fe;
+  background: #fff;
+  color: #3730a3;
+  border-radius: 999px;
+  padding: 5px 12px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.trHint {
+  margin-top: 8px;
+  color: var(--sub);
+  font-size: 13px;
+}
