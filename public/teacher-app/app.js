@@ -383,6 +383,19 @@ function minimizeEditor(){
 /* =====================================================================
  *  0. 대문 (로고를 누르면 여기로)
  * ===================================================================== */
+/** 대문 [튜토리얼 영상 보기] 영상 — public/tutorial.mp4 에 파일을 넣거나, 유튜브 주소(youtu.be/… · watch?v=…)로 바꾸면 돼요.
+ *  파일이 아직 없으면 '준비 중' 안내가 나와요. */
+const TUTORIAL_VIDEO = '/tutorial.mp4';
+function openTutorial(){
+  const yt = TUTORIAL_VIDEO.match(/(?:youtu\.be\/|[?&]v=|\/embed\/|\/shorts\/)([\w-]{11})/);
+  const player = yt
+    ? `<iframe src="https://www.youtube-nocookie.com/embed/${yt[1]}?autoplay=1&rel=0" title="튜토리얼 영상" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>`
+    : `<video src="${esc(TUTORIAL_VIDEO)}" controls autoplay playsinline></video>`;
+  const m = modal({title:'튜토리얼 영상', wide:true, body:`<div class="tut-video">${player}</div>`});
+  $('.modal', m.el).classList.add('tut');   // 창을 닫으면 영상 요소째 사라져서 재생도 멈춰요
+  const v = $('.tut-video video', m.el);
+  if (v) v.onerror = () => { v.parentElement.innerHTML = '<div class="tut-empty">튜토리얼 영상을 준비하고 있어요.<br>조금만 기다려 주세요!</div>'; };
+}
 async function renderHome(){
   const main = $('#main');
   const cards = [
@@ -394,7 +407,8 @@ async function renderHome(){
   const act = S.classes.filter(c => c.status !== 'ended');
   main.innerHTML = `<div class="home">
     <div class="home-hero"><div class="home-logo">${MANATEE}</div>
-      <div><h1>manatee</h1><p>개념 지도와 오개념으로 수업을 설계하고, 형성평가로 학생의 생각을 확인하는 수업 도구</p></div></div>
+      <div class="home-hero-txt"><h1>manatee</h1><p>개념 지도와 오개념으로 수업을 설계하고, 형성평가로 학생의 생각을 확인하는 수업 도구</p></div>
+      <button class="home-tut" id="homeTut" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" fill="currentColor"/></svg>튜토리얼 영상 보기</button></div>
     <div class="home-cards">${cards.map((c, i) => `<button class="home-card" data-hc="${i}">${c[1]}<b>${esc(c[2])}</b><span>${esc(c[3])}</span></button>`).join('')}</div>
     <div class="home-row">
       <div class="home-box"><h3>오늘 · 다가오는 수업</h3><div id="homeUp" class="an-sub">불러오는 중…</div></div>
@@ -405,6 +419,7 @@ async function renderHome(){
         <div><b>${S.miscons.length}</b><span>오개념</span></div></div></div>
     </div></div>`;
   $$('[data-hc]', main).forEach(b => b.onclick = () => cards[b.dataset.hc][4]());
+  $('#homeTut', main).onclick = openTutorial;
   let list = [];
   try { list = await call('upcoming'); } catch(e){}
   const box = $('#homeUp');
