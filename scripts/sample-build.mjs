@@ -169,7 +169,7 @@ const same = old.version && JSON.stringify({ ...body }) === JSON.stringify({
 });
 const version = same ? old.version : (old.version ?? 1) + 1;
 const seed = {
-  _about: '모든 교사 계정에 들어가는 기본 문항 세트 — scripts/sample-build.mjs 로 만든 파일이에요 (직접 고치지 말고 다시 만들어 주세요). ' + (PROVISIONAL ? '임시 세트 (예전 기본 세트 내용 + 그림, 최종 계정에서 내보내기 전) — npm run sample:update 로 바꿔 주세요.' : src._about ?? ''),
+  _about: '모든 교사 계정에 들어가는 기본 문항 세트 — scripts/sample-build.mjs 로 만든 파일이에요 (직접 고치지 말고 다시 만들어 주세요). ' + (PROVISIONAL ? '임시 세트 (예전 기본 세트 내용 + 그림, 최종 계정에서 내보내기 전) — npm run sample:update 로 바꿔 주세요.' : String(src._about ?? '').replace(/[^\s'"]+@[^\s'"]+ 계정/g, '기준 교사 계정')),   // 공개 저장소: 이메일은 넣지 않음
   version,
   ...(PROVISIONAL ? { provisional: true } : {}),
   ...body,
