@@ -17,6 +17,7 @@ import s from './student.module.css';
  *  3) 선생님이 [문제 출제하기] → 문제 → 제출하면 '제출했어요' + 문제 원문과 내가 고른 답 (정답은 아직 안 보여요)
  *     객관식에는 항상 '모르겠어요' 선지가 붙어요 (고르면 다른 선지는 못 골라요)
  *  4) 선생님이 [정답 공개] → 정답 여부 · 정답 (해설 없음) + 문제 원문 / [수업 종료] → '수업이 끝났어요'
+ *  5) 빈 화면의 [틀린 문제 다시 보기]: 끝난 수업에서 틀린 문제 · 내 답 · 정답 (진행 중인 수업 문제는 빠짐)
  */
 
 type Profile = { name: string; studentNo: string; grade: number; className: string };
@@ -27,6 +28,10 @@ type View = {
   channel: string | null;
   question: null | { id: string; no: number; type: 'mc' | 'short'; stem: string; choices: string[]; imageUrl: string; choiceImages?: string[]; need: number };
   result: null | { answer: string | null; correct: boolean | null; correctAnswer: string | null; revealed: boolean };
+};
+type ReviewItem = {
+  id: string; date: string; lesson: string; type: 'mc' | 'short'; stem: string; choices: string[]; imageUrl: string; choiceImages: string[];
+  answer: string; correctAnswer: string; wrongCount: number;
 };
 
 /** 빈 화면 문구 (수업 상태별) */
@@ -141,6 +146,7 @@ function MainView({ me, out }: { me: Profile; out: (why?: string) => void }) {
   // 수업 중이던 채널이 사라지면(=교사가 수업 종료) '수업이 끝났어요'
   const lastChannel = useRef<string | null>(null);
   const [ended, setEnded] = useState(false);
+  const [review, setReview] = useState(false);
 
   const refresh = useCallback(async () => {
     if (inflight.current) { again.current = true; return; }
@@ -175,6 +181,10 @@ function MainView({ me, out }: { me: Profile; out: (why?: string) => void }) {
   }, [channel, refresh]);
 
   const idleText = !v ? IDLE_TEXT.loading : ended && !v.channel ? IDLE_TEXT.ended : v.status === 'closed' ? IDLE_TEXT.closed : IDLE_TEXT.waiting;
+  const busy = (v?.view === 'question' && !!v.question) || (v?.view === 'result' && !!v.result);
+  // 문제가 올라오면 다시 보기 화면은 닫고 문제부터
+  if (review && busy) setReview(false);
+  if (review) return <div className={`${s.page} ${s.blank}`}><ReviewList onClose={() => setReview(false)} onAuth={out} /><Settings me={me} online={online} onLogout={out} /></div>;
   return (
     <div className={`${s.page} ${s.blank}`}>
       {v?.view === 'question' && v.question && (
@@ -187,6 +197,7 @@ function MainView({ me, out }: { me: Profile; out: (why?: string) => void }) {
             <ManateeMark size={72} />
             <h2>{idleText[0]}</h2>
             <p>{idleText[1]}</p>
+            {v && <button type="button" className={s.reviewBtn} onClick={() => setReview(true)}>틀린 문제 다시 보기</button>}
           </div>
         </div>
       )}
@@ -324,6 +335,68 @@ function ResultView({ r, q }: { r: NonNullable<View['result']>; q: View['questio
   );
 }
 
+/* ---------------- 틀린 문제 다시 보기 ---------------- */
+function ReviewList({ onClose, onAuth }: { onClose: () => void; onAuth: (why?: string) => void }) {
+  const [items, setItems] = useState<ReviewItem[] | null>(null);
+  const [err, setErr] = useState('');
+  const [open, setOpen] = useState<string | null>(null);
+  useEffect(() => {
+    studentApi<ReviewItem[]>('studentReview').then((r) => { setItems(r); setOpen(r[0]?.id ?? null); })
+      .catch((e) => (isAuth(e) ? onAuth((e as Error).message) : setErr((e as Error).message)));
+  }, [onAuth]);
+  const day = (d: string) => { const [, m, dd] = d.split('-').map(Number); return m && dd ? `${m}/${dd}` : d; };
+  return (
+    <div className={s.wrap}>
+      <div className={s.rvHead}>
+        <button type="button" className={s.linkBtn} style={{ margin: 0 }} onClick={onClose}>‹ 돌아가기</button>
+        <h1>틀린 문제 다시 보기</h1>
+        {items && <span className={s.rvCount}>{items.length}문제</span>}
+      </div>
+      {err && <div className={s.err} role="alert">{err}</div>}
+      {!items && !err && <div className={s.rvEmpty}>불러오는 중이에요…</div>}
+      {items && !items.length && <div className={s.rvEmpty}>끝난 수업에서 틀린 문제가 없어요. 잘했어요!</div>}
+      {items?.map((it) => {
+        const mc = it.type === 'mc', isOpen = open === it.id;
+        const mine = new Set(nos(it.answer)), right = new Set(nos(it.correctAnswer));
+        return (
+          <div key={it.id} className={`${s.card} ${s.rvItem}`}>
+            <button type="button" className={s.rvTop} onClick={() => setOpen(isOpen ? null : it.id)} aria-expanded={isOpen}>
+              <span className={s.rvMeta}>{day(it.date)}{it.lesson ? ` · ${it.lesson}` : ''}{it.wrongCount > 1 ? <em>{it.wrongCount}번 틀림</em> : null}</span>
+              <span className={s.rvStem}>{it.stem}</span>
+              <span className={s.rvArr}>{isOpen ? '접기 ▲' : '보기 ▼'}</span>
+            </button>
+            {isOpen && (
+              <div className={s.rvBody}>
+                <div className={s.cmp}>
+                  <div><span>내가 고른 답</span><b className={s.rvMine}>{mc ? circ(it.answer) : it.answer}</b></div>
+                  <div><span>정답</span><b className={s.right}>{mc ? circ(it.correctAnswer) : nos(it.correctAnswer)[0] ?? ''}</b></div>
+                </div>
+                <QuestionImage className={s.qimg} src={it.imageUrl} />
+                {mc && (
+                  <div className={`${s.choices} ${it.choiceImages.some(Boolean) ? s.picChoices : ''}`}
+                    style={it.choiceImages.some(Boolean) ? { gridTemplateColumns: `repeat(${it.choices.length}, minmax(0, 1fr))` } : undefined}>
+                    {it.choices.map((c, i) => {
+                      const v = String(i + 1), img = it.choiceImages[i] ?? '';
+                      return (
+                        <div key={v} className={`${s.ch} ${s.ro} ${right.has(v) ? s.ans : mine.has(v) ? s.wrong : ''}`}>
+                          <span className={s.n}>{CIRC[i]}</span>
+                          {img && <QuestionImage className={s.chImg} src={img} alt={`${i + 1}번 보기 그림`} />}
+                          {c && <span>{c}</span>}
+                          {mine.has(v) && <em className={s.mineTag}>내 답</em>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /* ---------------- 설정 (왼쪽 아래) ---------------- */
 function Settings({ me, online, onLogout }: { me: Profile; online: boolean; onLogout: (why?: string) => void }) {
   const [open, setOpen] = useState(false);
@@ -352,14 +425,13 @@ function Settings({ me, online, onLogout }: { me: Profile; online: boolean; onLo
     <>
       <button className={s.gear} onClick={() => setOpen(!open)} aria-label="설정" title="설정">
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-          <circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" />
+          <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" strokeLinejoin="round" /><circle cx="12" cy="12" r="3" />
         </svg>
         {!online && <i className={`${s.gearDot} ${s.off}`} />}
       </button>
       {open && (
         <div className={s.panel}>
           <div className={s.who}><b>{me.studentNo} {me.name}</b>{!online && <span className={s.offTxt}> · 연결 끊김</span>}</div>
-          <div className={s.hint}>다른 기기에서 내 이름으로 로그인하면 이 기기는 로그아웃돼요. 그런 적이 없는데 로그아웃됐다면 비밀번호를 바꾸고 선생님께 알려 주세요.</div>
           <form onSubmit={changePw}>
             <input className={s.inpSm} type="password" placeholder="지금 비밀번호" value={cur} onChange={(e) => setCur(e.target.value)} />
             <input className={s.inpSm} type="password" placeholder="새 비밀번호 (4자 이상)" value={next} onChange={(e) => setNext(e.target.value)} />

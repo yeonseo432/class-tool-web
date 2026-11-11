@@ -198,6 +198,53 @@ export async function studentState(io: CookieIO): Promise<StudentView> {
   return { view: 'question', channel: s.id, result: null, question };
 }
 
+export type ReviewItem = {
+  id: string; date: string; lesson: string; type: 'mc' | 'short'; stem: string; choices: string[]; imageUrl: string; choiceImages: string[];
+  answer: string; correctAnswer: string; wrongCount: number;
+};
+
+/**
+ * 틀린 문제 다시 보기: 끝난 수업에서 틀린(모르겠어요 포함) 문제 — 문제마다 가장 최근에 틀린 것 하나, 최근 순.
+ * 진행 중인 수업의 응답은 빼요 (아직 푸는 친구에게 정답이 새지 않게). 문제는 수업 때 낸 그대로(세션 스냅숏)를 먼저 써요.
+ */
+export async function studentReview(io: CookieIO): Promise<ReviewItem[]> {
+  const sb = createAdminClient();
+  const rows = await me(sb, io);
+  if (!rows.length) throw new ApiError('다시 로그인해 주세요.', 401);
+  const resp = must(await sb.from('responses').select('lesson_id, session_id, question_id, answer, created_at')
+    .in('student_key', rows.map((r) => r.id)).eq('correct', false).order('created_at', { ascending: false }).limit(500));
+  if (!resp.length) return [];
+  const sids = [...new Set(resp.map((r) => r.session_id).filter((x): x is string => !!x))];
+  const sessions = sids.length ? must(await sb.from('live_sessions').select('id, phase, questions').in('id', sids)) : [];
+  const live = new Set(sessions.filter((x) => x.phase !== 'ended').map((x) => x.id));
+  const done = resp.filter((r) => !r.session_id || !live.has(r.session_id));
+  const snap = new Map<string, M.Question>();
+  sessions.forEach((x) => snapshot(x as Session).forEach((q) => snap.set(x.id + '|' + q.id, q)));
+  const qids = [...new Set(done.map((r) => r.question_id))];
+  const qRows = qids.length ? must(await sb.from('questions').select('*').in('id', qids)) : [];
+  const qById = new Map(qRows.map((r) => [r.id, M.question(r)]));
+  const lids = [...new Set(done.map((r) => r.lesson_id))];
+  const lessons = lids.length ? must(await sb.from('lessons').select('id, class_id, no, date').in('id', lids)) : [];
+  const cids = [...new Set(lessons.map((l) => l.class_id))];
+  const classes = cids.length ? must(await sb.from('classes').select('id, name').in('id', cids)) : [];
+  const out = new Map<string, ReviewItem>();
+  for (const r of done) {
+    const q = (r.session_id && snap.get(r.session_id + '|' + r.question_id)) || qById.get(r.question_id);
+    if (!q) continue;   // 지워진 문제
+    const prev = out.get(q.id);
+    if (prev) { prev.wrongCount++; continue; }   // 최근 것 하나만 (응답은 최근 순)
+    const l = lessons.find((x) => x.id === r.lesson_id);
+    const cls = l && classes.find((c) => c.id === l.class_id);
+    out.set(q.id, {
+      id: q.id, date: l?.date ?? r.created_at.slice(0, 10), lesson: l ? `${cls?.name ?? ''} ${l.no}차시`.trim() : '',
+      type: q.type, stem: q.stem, choices: q.type === 'mc' ? q.choices : [], imageUrl: q.imageUrl,
+      choiceImages: q.type === 'mc' ? q.choices.map((_, i) => q.choiceImages?.[i] ?? '') : [],
+      answer: r.answer, correctAnswer: q.answer, wrongCount: 1,
+    });
+  }
+  return [...out.values()];
+}
+
 /** 학생에게 보내는 문제 (정답 · 오개념 · 해설은 빼고) */
 function qView(q: M.Question, idx: number): NonNullable<StudentView['question']> {
   return {

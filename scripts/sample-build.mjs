@@ -55,6 +55,13 @@ const prev = previousOf(old);
 const warn = [];
 mkdirSync(IMG_DIR, { recursive: true });
 const written = new Set();
+/** 고친 그림(scripts/figure-fix-r1.mjs 가 만든 *-r1.svg)이 있으면 그 그림을 쓰고 지우지 않음 */
+const useR1 = (f) => {
+  const r1 = f.replace(/\.svg$/, '-r1.svg');
+  if (!existsSync(path.join(IMG_DIR, r1))) return f;
+  written.add(r1);
+  return r1;
+};
 function fixMis(q) {
   const fix = CHOICE_MIS_FIX[q.code];
   if (!fix || q.choiceMis.some((a) => a.length)) return q.choiceMis;
@@ -82,7 +89,7 @@ const questions = src.questions.map((q) => {
     const f = `${slug(q.code)}.svg`;
     writeFileSync(path.join(IMG_DIR, f), fig.figure);
     written.add(f);
-    out.image = '/sample/' + f;
+    out.image = '/sample/' + useR1(f);
   }
   if (fig.choices) {
     const changed = fig.choices.length !== q.choices.length || fig.choices.some((c, i) => norm(c.forText) !== norm(textOf(i)));
@@ -97,7 +104,7 @@ const questions = src.questions.map((q) => {
       const f = `${slug(q.code)}-c${i + 1}.svg`;
       writeFileSync(path.join(IMG_DIR, f), c.svg);
       written.add(f);
-      out.choiceImages[i] = '/sample/' + f;
+      out.choiceImages[i] = '/sample/' + useR1(f);
       out.choices[i] = '';   // 그림 선지는 글을 지움 (설명은 SVG <title>)
     });
   }
@@ -127,6 +134,24 @@ if (existsSync(EXTRA_FILE)) {
         if (!links.some((l) => l.subject === s.subject && l.from === unit && l.to === name)) links.push({ subject: s.subject, from: unit, to: name });
       });
     });
+  }
+}
+
+/*
+ * 개념 ↔ 개념 연결 (data/concept-links.json): 있으면 단원 → 개념 연결선은 빼고(단원 소속은 지도에 옅은 점선) 개념끼리 이어요.
+ */
+const LINKS_FILE = path.join(ROOT, 'data/concept-links.json');
+if (existsSync(LINKS_FILE)) {
+  const cl = JSON.parse(readFileSync(LINKS_FILE, 'utf8')).subjects;
+  const kindOf = new Map(concepts.map((c) => [c.subject + '\u0000' + c.name, c.kind]));
+  const isUnit = (s, n) => kindOf.get(s + '\u0000' + n) === 'unit';
+  for (let i = links.length - 1; i >= 0; i--) if (cl[links[i].subject] && (isUnit(links[i].subject, links[i].from) || isUnit(links[i].subject, links[i].to))) links.splice(i, 1);
+  for (const [subject, pairs] of Object.entries(cl)) {
+    for (const [from, to] of pairs) {
+      const bad = [from, to].filter((n) => kindOf.get(subject + '\u0000' + n) !== 'concept');
+      if (bad.length) { warn.push(`개념 연결 ${subject}: '${bad.join("', '")}' 개념이 없어요 (${from} → ${to} 빠짐)`); continue; }
+      if (!links.some((l) => l.subject === subject && ((l.from === from && l.to === to) || (l.from === to && l.to === from)))) links.push({ subject, from, to });
+    }
   }
 }
 
